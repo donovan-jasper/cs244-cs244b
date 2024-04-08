@@ -15,6 +15,7 @@
 
 Donovan Jasper: junior, CS + Music Dual Degree Canditate. Cyber-teammate and friend (<3)
 Yasmine Mitchell: coterm, CS Systems + Computer and Network Security. 
+Kelechi Uhegbu: Senior, Symbolic Systems (AI) + Computer Science (Computer and Network Security) coterm
 
 ### What is your team mascot?
 
@@ -49,6 +50,7 @@ Yasmine: Boba expertise
 
 ### When will the team meet as a group each week? Please be precise.
 I feel like twice a week is a good cadence to start at? We can discuss times Will probably need to discuss with Adi as well.
+- I think 2x a week is good as well
 
 
 ### What will be the procedure for missing or being late to this meeting? How much advance notice must be given and using what method? (We recommend that last-minute text messaging is not used to inform team members that a member will be late or miss a meeting.)
