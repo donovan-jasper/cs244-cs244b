@@ -14,7 +14,9 @@
 ### Who are your team members?
 
 Donovan Jasper: junior, CS + Music Dual Degree Canditate. Cyber-teammate and friend (<3)
+
 Yasmine Mitchell: coterm, CS Systems + Computer and Network Security. 
+
 Kelechi Uhegbu: Senior, Symbolic Systems (AI) + Computer Science (Computer and Network Security) coterm
 
 ### What is your team mascot?
