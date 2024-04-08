@@ -8,7 +8,7 @@ Kelechi Uhegbu: Senior, Symbolic Systems (AI) + Computer Science (Computer and N
 
 ### What is your team mascot?
 
-Fuzzy Wombat (other posibilitiy, tartigrade) 
+Fuzzy Wombat (other posibilitiy, tartigrade, Sugar gliders as their eyes look like boba) 
 
 ### How will the team celebrate triumphs?
 
@@ -37,7 +37,7 @@ Yasmine: Boba expertise, distributed system expertise
 
 Donovan: Boba consumption, willpower, pizzazz
 
-Kelechi: 
+Kelechi: Boba willigness, active listening
 
 ### When will the team meet as a group each week? Please be precise.
 
