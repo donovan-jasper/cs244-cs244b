@@ -1,16 +1,3 @@
-### What are your goals for the class? Please have each member discuss individually.
-
-### Talk about some triumphs and challenges on past team assignments.
-
-**Donovan**: 
-
-**Yasmine**:
-
-**Kelechi**
-
-
-(Include in the charter:)
-
 ### Who are your team members?
 
 Donovan Jasper: junior, CS + Music Dual Degree Canditate. Cyber-teammate and friend (<3)
