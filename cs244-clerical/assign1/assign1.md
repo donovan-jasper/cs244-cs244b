@@ -8,8 +8,7 @@ Kelechi Uhegbu: Senior, Symbolic Systems (AI) + Computer Science (Computer and N
 
 ### What is your team mascot?
 
-Wombat? :0 - def open too discussion
-// Am down for Wombat
+Fuzzy Wombat (other posibilitiy, tartigrade) 
 
 ### How will the team celebrate triumphs?
 
@@ -17,40 +16,40 @@ Boba from the best boba shop in the Bay (Sunright)
  
 ### How will the team make important decisions?
 
-I'm pretty flexible so I'm happy to contribute to this or not, generally I think a consensus descision process would be reasonable for a group of this size.
-Raft distributed consensus protocol?? :D
+We will adopt a consensus (or at worst majority) descision process (see: RAFT distributed consensus protocol :P).
 
 ### How will the team resolve conflicts and discuss problems?
 
-We get along, likely best idea wins?  I think we can take a democratic resolution approach.
+In the event of conflicts or issues, we will adopt a democratic approach to resolution, where the most popular decision will be the victor.
+In terms of discussing problems, we all get along well and expect harmonious constructive collaboration should be easy.
 
 ### Leadership: What does “leadership” mean to your team?
 
-A leader isn't a boss, but leads by example.  This I think is a well held opinion, but a good leader doesn't shy away from management to reach their direction? idk 
+In our team, leadership is not about authority but about setting an example and guiding the team towards our shared goals. A good leader, in our view, blends exemplary conduct with effective management to steer the team in the right direction.
 
 ### Who is the person that hits “submit” on your reports and milestones? The one who crosses the “t”s and dots the “i”s? You can assign different people to be in charge of different reports and milestones, but it helps to have a clear person in charge for each one.
 
-I'm happy to submit and help out with some of the clerical stuff.  Happy to proof read a bit too but this should likely go to he/she who feels most confident about that section of code who isn't the author.
-Yeah I feel like we should probably designate separately for each assignment.
+Donovan will submit each report and milestone.  The responsibility of dotting t's and crossing i's will be given to the most knowledgeable person in regards to that assignment.
 
 ### What are the skills of the team members? What special skill does everyone bring to the team?
-Yasmine: Boba expertise
 
+Yasmine: Boba expertise, distributed system expertise
+Donovan: Boba consumption, willpower, pizzazz
+Kelechi: 
 
 ### When will the team meet as a group each week? Please be precise.
-I feel like twice a week is a good cadence to start at? We can discuss times Will probably need to discuss with Adi as well.
-- I think 2x a week is good as well
 
+We will begin by meeting twice a week to start. From this meeting twice a week, we will adjust as necceasry.
+Our initial meetings will be 2, 2-hour sessions from 3:30 - 5:30 on Tuesdays and Thursdays at Roble Hall's conference room.
 
 ### What will be the procedure for missing or being late to this meeting? How much advance notice must be given and using what method? (We recommend that last-minute text messaging is not used to inform team members that a member will be late or miss a meeting.)
-They have to provide apology boba, jkjk.
-I feel like we have enough rapport that I'm not too worried about this. We can just say they should give a heads up as soon as they know?
 
+We trust in our strong rapport to make this not a major concern.  We will provide advance notice in the case of missing or tardy.
+(and apology boba is always nice :P) 
 
 ### How will you design your software so people can work independently, through stable and well-defined interfaces?
-This is where 190 knowledge comes in lol.
-Chosing a project that's modular to start with would be nice. I also think that when we first start the project and interfaces are more in flux, we should meet more often/have more constant communication.
 
+We will choose a project that's inherently modular. When we first start the project and interfaces are more in flux, we will meet more often/have more constant communication.
 
 ### What area(s) of networking research will you explore?
 Distributed Systems 😎
