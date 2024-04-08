@@ -1,2 +1,2 @@
-# cs244
-cs244 (and potentially 244b) repository
+# cs244/cs244b
+repository for cs244/cs244b project
