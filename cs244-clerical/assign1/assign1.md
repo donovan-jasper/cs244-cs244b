@@ -1,6 +1,7 @@
 ### Who are your team members?
+Cyber-teammates and friends (<3)
 
-Donovan Jasper: junior, CS + Music Dual Degree Canditate. Cyber-teammate and friend (<3)
+Donovan Jasper: junior, CS + Music Dual Degree Canditate. 
 
 Yasmine Mitchell: coterm, CS Systems + Computer and Network Security. 
 
@@ -8,7 +9,7 @@ Kelechi Uhegbu: Senior, Symbolic Systems (AI) + Computer Science (Computer and N
 
 ### What is your team mascot?
 
-Fuzzy Wombat (other posibilitiy, tartigrade, Sugar gliders as their eyes look like boba) 
+Rainbow Wombat
 
 ### How will the team celebrate triumphs?
 
@@ -16,12 +17,12 @@ Boba from the best boba shop in the Bay (Sunright)
  
 ### How will the team make important decisions?
 
-We will adopt a consensus (or at worst majority) descision process (see: RAFT distributed consensus protocol :P).
+We will adopt a consensus (or at worst majority) decision process (see: RAFT distributed consensus protocol :P).
 
 ### How will the team resolve conflicts and discuss problems?
 
 In the event of conflicts or issues, we will adopt a democratic approach to resolution, where the most popular decision will be the victor.
-In terms of discussing problems, we all get along well and expect harmonious constructive collaboration should be easy.
+In terms of discussing problems, we all get along well and expect harmonious constructive collaboration.
 
 ### Leadership: What does “leadership” mean to your team?
 
@@ -33,11 +34,11 @@ Donovan will submit each report and milestone.  The responsibility of dotting t'
 
 ### What are the skills of the team members? What special skill does everyone bring to the team?
 
-Yasmine: Boba expertise, distributed system expertise
+Yasmine: Boba expertise, experience implementing distributed systems
 
-Donovan: Boba consumption, willpower, pizzazz
+Donovan: Boba consumption, willpower, pizzazz, network security
 
-Kelechi: Boba willigness, active listening
+Kelechi: Boba willingness, active listening, networking middleware
 
 ### When will the team meet as a group each week? Please be precise.
 
@@ -51,7 +52,7 @@ We trust in our strong rapport to make this not a major concern.  We will provid
 
 ### How will you design your software so people can work independently, through stable and well-defined interfaces?
 
-We will choose a project that's inherently modular. When we first start the project and interfaces are more in flux, we will meet more often/have more constant communication.
+We will try and choose a project that's inherently modular. When we first start the project and interfaces are more in flux, we will meet more often/have more constant communication.
 
 ### What area(s) of networking research will you explore?
 Distributed Systems 😎
