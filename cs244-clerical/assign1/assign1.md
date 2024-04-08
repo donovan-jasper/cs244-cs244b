@@ -34,7 +34,9 @@ Donovan will submit each report and milestone.  The responsibility of dotting t'
 ### What are the skills of the team members? What special skill does everyone bring to the team?
 
 Yasmine: Boba expertise, distributed system expertise
+
 Donovan: Boba consumption, willpower, pizzazz
+
 Kelechi: 
 
 ### When will the team meet as a group each week? Please be precise.
