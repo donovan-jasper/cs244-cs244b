@@ -17,7 +17,7 @@ Saturday June 8 you will present your project to the class and demo what you hav
 
 cs244:
 
-Group formation due Monday, April 8 11:59PM
+~~Group formation due Monday, April 8 11:59PM~~
 
 Selected figure and project proposal due Monday, April 15 11:59PM
 
