@@ -47,7 +47,7 @@ Our initial meetings will be 2, 2-hour sessions from 3:30 - 5:30 on Tuesdays and
 
 ### What will be the procedure for missing or being late to this meeting? How much advance notice must be given and using what method? (We recommend that last-minute text messaging is not used to inform team members that a member will be late or miss a meeting.)
 
-We trust in our strong rapport to make this not a major concern.  We will provide advance notice in the case of missing or tardy.
+We trust in our strong rapport to make this not a major concern.  We will provide advance notice in the case of missing or tardy as soon as we know of the conflict.
 (and apology boba is always nice :P) 
 
 ### How will you design your software so people can work independently, through stable and well-defined interfaces?
