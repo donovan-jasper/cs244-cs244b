@@ -3,18 +3,21 @@
 echo "Starting basicdns test..."
 echo "Starting the DNS server..."
 sudo go run main.go &
-DNS_SERVER_PID=$!
 
 # Wait a bit for the server to start
 sleep 2
 
+# Save the PID of the process using port 53
+DNS_SERVER_PID=$(sudo lsof -i :53 -t | head -n 1)
+echo "DNS server PID: $DNS_SERVER_PID"
+
 # Local test
 echo "Testing local domain resolution:"
-dig @127.0.0.1 example.local A +short
+dig @localhost example.local A +short
 
 # External forwarding test
 echo "Testing external domain forwarding:"
-dig @127.0.0.1 google.com A +short
+dig @localhost google.com A +short
 
 # Kill the DNS server
 echo "Stopping the DNS server..."
