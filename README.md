@@ -5,9 +5,9 @@ repository for cs244/cs244b project
 todo: 
 
 cs244b:
-By Monday, April 15 you must form a project team of 1-4 people and sign up for a slot to meet with the course staff (details coming soon).
+~~By Monday, April 15 you must form a project team of 1-4 people and sign up for a slot to meet with the course staff (details coming soon).~~
 
-Before Monday, April 22 you should schedule a meeting of your team with the course staff to discuss your proposed project. Once your proposal has been approved, submit through Gradescope a short (1 paragraph) description of what you want to do, which may be posted on the web site so everybody knows what the different projects are. Please also include a short description of CS244B related content if your project is shared with another class.
+~~Before Monday, April 22 you should schedule a meeting of your team with the course staff to discuss your proposed project. Once your proposal has been approved, submit through Gradescope a short (1 paragraph) description of what you want to do, which may be posted on the web site so everybody knows what the different projects are. Please also include a short description of CS244B related content if your project is shared with another class.~~
 
 Friday, May 31 you must submit through Gradescope a project progress report with a final title and list of project team members, including a link to the git repository for your source code and a one paragraph abstract of your project (which can be the same as your proposal, but things may have changed).
 
@@ -19,7 +19,7 @@ cs244:
 
 ~~Group formation due Monday, April 8 11:59PM~~
 
-Selected figure and project proposal due Monday, April 15 11:59PM
+~~Selected figure and project proposal due Monday, April 15 11:59PM~~
 
 Midterm report due Monday, May 13 11:59PM
 
