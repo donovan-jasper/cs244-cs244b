@@ -37,19 +37,18 @@ func parseQuery(m *dns.Msg) {
 				}
 			} else { // otherwise resolve from Cloudflare DNS
 				c := new(dns.Client)
-				in, _, err := c.Exchange(m, "1.1.1.1:53") // query cludflare DNS  TODO: why is this not working?
-				log.Printf("contents of recieved message: %v\n", in)
+				recursiveMsg := new(dns.Msg)
+				recursiveMsg.SetQuestion(q.Name, dns.TypeA)
+
+				in, _, err := c.Exchange(recursiveMsg, "1.1.1.1:53") // query Cloudflare DNS
 				if err != nil {
 					log.Printf("error querying Cloudflare: %v\n", err)
 					return
 				}
-				if err == nil {
-					m.Answer = append(m.Answer, in.Answer...)
-				}
+				m.Answer = append(m.Answer, in.Answer...)
 			}
 		}
 	}
-	// TODO: add reverse lookup?
 }
 
 func main() {
