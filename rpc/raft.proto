@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package raft;
+
+// Specify the Go package for the generated code
+option go_package = "github.com/enigma/raft/pb";
+
+// Define the Raft service with its RPC methods
+service Raft {
+  // AppendEntries is used by the leader to replicate log entries
+  rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
+  // RequestVote is used by candidates to gather votes
+  rpc RequestVote(RequestVoteRequest) returns (RequestVoteResponse);
+  // InstallSnapshot is used to install a snapshot of the log on the followers
+  rpc InstallSnapshot(InstallSnapshotRequest) returns (InstallSnapshotResponse);
+}
+
+// Message for AppendEntries request
+message AppendEntriesRequest {
+  int32 term = 1;                  // Leader's term
+  string leaderId = 2;             // Leader's ID
+  int32 prevLogIndex = 3;          // Index of log entry immediately preceding new ones
+  int32 prevLogTerm = 4;           // Term of prevLogIndex entry
+  repeated Entry entries = 5;      // Log entries to store (empty for heartbeat)
+  int32 leaderCommit = 6;          // Leader's commitIndex
+}
+
+// Message for AppendEntries response
+message AppendEntriesResponse {
+  int32 term = 1;                  // Current term, for leader to update itself
+  bool success = 2;                // True if follower contained entry matching prevLogIndex and prevLogTerm
+}
+
+// Message for RequestVote request
+message RequestVoteRequest {
+  int32 term = 1;                  // Candidate's term
+  string candidateId = 2;          // Candidate requesting vote
+  int32 lastLogIndex = 3;          // Index of candidate's last log entry
+  int32 lastLogTerm = 4;           // Term of candidate's last log entry
+}
+
+// Message for RequestVote response
+message RequestVoteResponse {
+  int32 term = 1;                  // Current term, for candidate to update itself
+  bool voteGranted = 2;            // True means candidate received vote
+}
+
+// Message for InstallSnapshot request
+message InstallSnapshotRequest {
+  int32 term = 1;                  // Leader's term
+  string leaderId = 2;             // Leader's ID
+  int32 lastIncludedIndex = 3;     // The snapshot replaces all entries up through and including this index
+  int32 lastIncludedTerm = 4;      // Term of lastIncludedIndex
+  bytes data = 5;                  // Raw snapshot data
+}
+
+// Message for InstallSnapshot response
+message InstallSnapshotResponse {
+  int32 term = 1;                  // Current term, for leader to update itself
+  bool success = 2;                // True if snapshot was successfully installed
+}
+
+// Entry represents a single log entry
+message Entry {
+  int32 index = 1;                 // Index of the entry
+  int32 term = 2;                  // Term when entry was received by leader
+  string command = 3;              // Command for state machine
+}
