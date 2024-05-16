@@ -21,7 +21,7 @@ cs244:
 
 ~~Selected figure and project proposal due Monday, April 15 11:59PM~~
 
-Midterm report due Monday, May 13 11:59PM
+~~Midterm report due Monday, May 13 11:59PM~~
 
 6/4 - Final Presentations
 or
