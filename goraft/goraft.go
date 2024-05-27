@@ -8,7 +8,7 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: go run goraft.go <server_id> <server0_address:port> <server1_address:port> ... <serverN_address:port>")
+		fmt.Println("Usage: go run . <server_id> <server0_address:port> <server1_address:port> ... <serverN_address:port>")
 		return
 	}
 
