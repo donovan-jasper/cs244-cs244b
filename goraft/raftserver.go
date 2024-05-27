@@ -75,8 +75,8 @@ func NewRaftServer(id int, peers []string, restoreFromDisk bool) *RaftServer {
 		rs.ackedIndex[i] = -1
 	}
 
-	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(1000000000, 1000000000), rs, setStateToCandidateCB)
-	rs.electionTimeoutTimer = NewTimer(randomDuration(1000000000, 1000000000), rs, setStateToFollowerCB)
+	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToCandidateCB)
+	rs.electionTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToFollowerCB)
 
 	return rs
 }
