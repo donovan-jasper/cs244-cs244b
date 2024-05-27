@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
-	"google.golang.org/grpc"
 	pb "github.com/enigma/raft/pb/github.com/enigma/raft/pb"
+	"google.golang.org/grpc"
 )
 
 // server is used to implement the Raft service
