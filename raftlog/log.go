@@ -134,6 +134,7 @@ func (w *WAL) WriteEntry(entry *LogEntry) error {
 	if _, err := w.bufWriter.Write(data); err != nil {
 		return err
 	}
+	w.bufWriter.Flush()
 	return nil
 }
 
