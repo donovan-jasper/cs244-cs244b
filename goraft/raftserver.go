@@ -208,8 +208,8 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 
 		if logChecksOut {
 			success = true
-
-			go rs.electionTimeoutTimer.Run()
+			rs.heartbeatTimeoutTimer.Stop()
+			go rs.heartbeatTimeoutTimer.Run()
 
 			// TODO: Remove all inconsistent entries and append new ones
 
