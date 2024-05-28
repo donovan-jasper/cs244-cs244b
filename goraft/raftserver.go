@@ -17,6 +17,12 @@ const (
 	Leader
 )
 
+const HEARTBEAT_INTERVAL = 500
+const HEARTBEAT_TIMEOUT_MIN = 2000
+const HEARTBEAT_TIMEOUT_MAX = 5000
+const ELECTION_TIMEOUT_MIN = 2000
+const ELECTION_TIMEOUT_MAX = 5000
+
 type RaftServer struct {
 	id int
 	// Network addresses of cluster peers
@@ -33,7 +39,7 @@ type RaftServer struct {
 	lastState    int32
 
 	// Volatile state
-	commitIndex   int
+	commitIndex   int32
 	lastApplied   int
 	currentLeader int
 
@@ -80,8 +86,8 @@ func NewRaftServer(id int, peers []Address, restoreFromDisk bool) *RaftServer {
 
 	rs.net = NewNetworkModule()
 
-	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToCandidateCB)
-	rs.electionTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToFollowerCB)
+	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
+	rs.electionTimeoutTimer = NewTimer(randomDuration(ELECTION_TIMEOUT_MIN, ELECTION_TIMEOUT_MAX), rs, setStateToFollowerCB)
 
 	return rs
 }
@@ -98,7 +104,7 @@ func (rs *RaftServer) run() {
 		case Candidate:
 			rs.doElection()
 		case Leader:
-			// TODO: Start heartbeat thread
+			go rs.sendHeartbeats()
 		}
 
 		for rs.loadCurrentState() == rs.loadLastState() {
@@ -288,6 +294,35 @@ func (rs *RaftServer) handleRequestVoteResponse(rvMsg *RequestVoteResponse) {
 	}
 }
 
+func (rs *RaftServer) sendHeartbeats() {
+	for rs.loadCurrentState() == Leader {
+		for i := range len(rs.peers) {
+			if i != rs.id {
+				// TODO: Calculate real prevLogIndex
+				var prevLogIndex int32 = -1
+				// TODO: Calculate real prevLogTerm
+				var prevLogTerm int32 = 0
+
+				// Create AppendEntries message and send
+				appEntriesReq := &AppendEntriesRequest{
+					Term:         int32(rs.currentTerm),
+					LeaderId:     int32(rs.id),
+					PrevLogIndex: prevLogIndex,
+					PrevLogTerm:  prevLogTerm,
+					LeaderCommit: atomic.LoadInt32(&rs.commitIndex),
+				}
+				raftMsg := &RaftMessage{
+					Message: &RaftMessage_AppendEntriesRequest{appEntriesReq},
+				}
+
+				rs.sendRaftMsg(i, raftMsg)
+			}
+		}
+
+		time.Sleep(HEARTBEAT_INTERVAL)
+	}
+}
+
 func (rs *RaftServer) evaluateElection() {
 	numVotes := 0
 	for range rs.votesReceived {
@@ -328,5 +363,5 @@ func (rs *RaftServer) setLastState(s State) {
 }
 
 func randomDuration(min, max int) time.Duration {
-	return time.Duration(rand.Intn(max-min+1) + min)
+	return time.Duration(rand.Intn(max-min+1)+min) * time.Millisecond
 }
