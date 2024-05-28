@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -25,10 +26,10 @@ func main() {
 		parts := strings.Split(str, ":")
 		if len(parts) == 2 {
 			addr := Address{
-				ip: parts[0]
-				port: parts[1]
+				ip:   parts[0],
+				port: parts[1],
 			}
-			peerAddresses.append(peerAddresses, addr)
+			peerAddresses = append(peerAddresses, addr)
 		} else {
 			// TODO: error
 		}

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package raft;
 
-option go_package = "./goraft";
+option go_package = "./main";
 
 
 message RaftMessage {
@@ -35,7 +35,7 @@ message AppendEntriesResponse {
 
 message RequestVoteRequest {
   int32 term = 1;
-  string candidateId = 2;
+  int32 candidateId = 2;
   int32 lastLogIndex = 3;
   int32 lastLogTerm = 4;
 }

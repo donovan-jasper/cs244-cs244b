@@ -7,10 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"goraft/github.com/enigma/raft/pb"
-
-	pb "github.com/enigma/raft/pb"
-
 	"google.golang.org/protobuf/proto"
 )
 
@@ -161,19 +157,19 @@ func (rs *RaftServer) doElection() {
 }
 
 func (rs *RaftServer) handleMessage(msg string) {
-	var raftMsg pb.RaftMessage
-	if err := proto.Unmarshal(msg, &raftMsg); err != nil {
+	var raftMsg RaftMessage
+	if err := proto.Unmarshal([]byte(msg), &raftMsg); err != nil {
 		fmt.Errorf("failed to unmarshal message: %w", err)
 	}
 
 	switch raftMsg.Message.(type) {
-	case *pb.RaftMessage_AppendEntriesRequest:
+	case *RaftMessage_AppendEntriesRequest:
 		rs.handleAppendEntriesRequest(raftMsg.GetAppendEntriesRequest())
-	case *pb.RaftMessage_AppendEntriesResponse:
+	case *RaftMessage_AppendEntriesResponse:
 		rs.handleAppendEntriesResponse(raftMsg.GetAppendEntriesResponse())
-	case *pb.RaftMessage_RequestVoteRequest:
+	case *RaftMessage_RequestVoteRequest:
 		rs.handleRequestVoteRequest(raftMsg.GetRequestVoteRequest())
-	case *pb.RaftMessage_RequestVoteResponse:
+	case *RaftMessage_RequestVoteResponse:
 		rs.handleRequestVoteResponse(raftMsg.GetRequestVoteResponse())
 	default:
 		fmt.Errorf("unknown message type")
@@ -181,7 +177,7 @@ func (rs *RaftServer) handleMessage(msg string) {
 }
 
 // TODO: Add logentries
-func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest) {
+func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 	if int(aeMsg.GetTerm()) > rs.currentTerm {
 		rs.currentTerm = int(aeMsg.GetTerm())
 		rs.votedFor = -1
@@ -207,21 +203,21 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 	}
 
 	// Send AppendEntriesResponse to leader
-	appEntriesResp := &pb.AppendEntriesResponse{
-		Term:     int32(rs.currentTerm),
-		Follower: int32(rs.id),
+	appEntriesResp := &AppendEntriesResponse{
+		Term:       int32(rs.currentTerm),
+		FollowerId: int32(rs.id),
 		// TODO: Set real acked index
-		AckedIndex: int32(-1),
-		Success:    success,
+		AckedIdx: int32(-1),
+		Success:  success,
 	}
-	raftMsg := &pb.RaftMessage{
-		Message: appEntriesResp,
+	raftMsg := &RaftMessage{
+		Message: &RaftMessage_AppendEntriesResponse{appEntriesResp},
 	}
 
 	rs.sendRaftMsg(int(aeMsg.GetLeaderId()), raftMsg)
 }
 
-func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesResponse) {
+func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *AppendEntriesResponse) {
 	if int(aerMsg.GetTerm()) == rs.currentTerm && rs.loadCurrentState() == Leader {
 		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
 			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
@@ -238,7 +234,7 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesRespon
 	}
 }
 
-func (rs *RaftServer) handleRequestVoteRequest(rvMsg *pb.RequestVoteRequest) {
+func (rs *RaftServer) handleRequestVoteRequest(rvMsg *RequestVoteRequest) {
 	if int(rvMsg.GetTerm()) > rs.currentTerm {
 		rs.currentTerm = int(rvMsg.GetTerm())
 		rs.setCurrentState(Follower)
@@ -260,22 +256,22 @@ func (rs *RaftServer) handleRequestVoteRequest(rvMsg *pb.RequestVoteRequest) {
 		go rs.electionTimeoutTimer.Run()
 	}
 
-	requestVoteReplyMsg := &pb.RequestVoteResponse{
-		Term:        rs.currentTerm,
+	requestVoteReplyMsg := &RequestVoteResponse{
+		Term:        int32(rs.currentTerm),
 		VoteGranted: vote,
-		VoterId:     rs.id,
+		VoterId:     int32(rs.id),
 	}
 
-	raftMsg := &pb.RaftMessage{
-		Message: requestVoteReplyMsg,
+	raftMsg := &RaftMessage{
+		Message: &RaftMessage_RequestVoteResponse{requestVoteReplyMsg},
 	}
 
 	rs.sendRaftMsg(int(rvMsg.GetCandidateId()), raftMsg)
 
 }
 
-func (rs *RaftServer) handleRequestVoteResponse(rvMsg *pb.RequestVoteResponse) {
-	if rs.loadCurrentState() == Candidate && int(rvMsg.GetTerm()) == rs.currentTerm && bool(rvMsg.GetVoteGranted) {
+func (rs *RaftServer) handleRequestVoteResponse(rvMsg *RequestVoteResponse) {
+	if rs.loadCurrentState() == Candidate && int(rvMsg.GetTerm()) == rs.currentTerm && bool(rvMsg.GetVoteGranted()) {
 		rs.votesReceived[int(rvMsg.GetVoterId())] = true
 		rs.evaluateElection()
 	} else if int(rvMsg.GetTerm()) > rs.currentTerm {
@@ -297,7 +293,7 @@ func (rs *RaftServer) evaluateElection() {
 	}
 }
 
-func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *pb.RaftMessage) {
+func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *RaftMessage) {
 	serializedMsg, err := proto.Marshal(raftMsg)
 	if err != nil {
 		fmt.Println(err)

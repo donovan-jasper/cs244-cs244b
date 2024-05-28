@@ -16,23 +16,23 @@ type NetworkModule struct {
 
 func NewNetworkModule() *NetworkModule {
 	return &NetworkModule{
-		msgQueue: make(chan string)
+		msgQueue: make(chan string),
 	}
-} 
+}
 
 func (n *NetworkModule) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
+	msg, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 		return
 	}
 
-	n <- string(buf[:n])
+	n.msgQueue <- string(buf[:msg])
 
-	fmt.Printf("Received message from client: %s\n", string(buf[:n]))
+	fmt.Printf("Received message from client: %s\n", string(buf[:msg]))
 }
 
 func (n *NetworkModule) listen(port string) {
@@ -53,7 +53,7 @@ func (n *NetworkModule) listen(port string) {
 			continue
 		}
 
-		go handleConnection(conn)
+		go n.handleConnection(conn)
 	}
 }
 
