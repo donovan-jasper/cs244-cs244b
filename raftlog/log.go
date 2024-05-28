@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-//accept and convert protobuf uint64 LogEntry struct
-// convert LogEntry uint64 to protobuf
+//accept and convert protobuf int32 LogEntry struct
+// convert LogEntry int32 to protobuf
 
 // CALL 3 ENTRIES:
 // append a LogEntry Protobuf (which will be a struct with protobuf functions)
@@ -23,19 +23,22 @@ import (
 
 // creating raft log entry
 // type LogEntry struct {
-// 	term    uint64    // term when entry was received by leader
-// 	index   uint64    // ensure ordering
+// 	term    int32    // term when entry was received by leader
+// 	index   int32    // ensure ordering
 // 	command string // change to bytes?
 // }
 
 // wal of https://github.com/JyotinderSingh/go-wal as reference
-// assume file is int32 (file size), then the data itself
+// assume file is int32 (chunk size), then the data itself
+
 type WAL struct {
 	filename  string
 	mu        sync.RWMutex
 	bufWriter *bufio.Writer
 	syncTimer *time.Timer
 	ctx       context.Context
+	metadata  []int // stores the indicies of the start of each entry
+	curIndex  int   // current byte index in the file
 }
 type RaftLog struct {
 	entries []*LogEntry
@@ -43,6 +46,7 @@ type RaftLog struct {
 }
 
 func NewWAL(filename string) *WAL {
+	// only for writing
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -52,6 +56,8 @@ func NewWAL(filename string) *WAL {
 		bufWriter: bufio.NewWriter(file),
 		syncTimer: time.NewTimer(100 * time.Millisecond),
 		ctx:       context.Background(),
+		metadata:  make([]int32, 0),
+		curIndex:  0,
 	}
 	go wal.syncRoutine()
 	return wal
@@ -71,7 +77,7 @@ func (r *RaftLog) AppendEntry(entry *LogEntry) {
 	r.wal.WriteEntry(entry)
 }
 
-func (r *RaftLog) GetEntry(index uint64) *LogEntry {
+func (r *RaftLog) GetEntry(index int32) *LogEntry {
 	return r.entries[index]
 }
 
@@ -83,17 +89,18 @@ func (r *RaftLog) GetLastEntry() *LogEntry {
 	return r.entries[len(r.entries)-1]
 }
 
-func (r *RaftLog) GetLastIndex() uint64 {
-	return uint64(len(r.entries) - 1)
+func (r *RaftLog) GetLastIndex() int32 {
+	return int32(len(r.entries) - 1)
 }
 
-func (r *RaftLog) GetSize() uint64 {
-	return uint64(len(r.entries))
+func (r *RaftLog) GetSize() int32 {
+	return int32(len(r.entries))
 }
 
-func (r *RaftLog) DeleteEntry(index uint64) {
+func (r *RaftLog) DeleteEntries(index int32) {
 	r.entries = append(r.entries[:index], r.entries[index+1:]...)
 	// TODO: delete entry from WAL
+	r.wal.TruncateAt(index)
 }
 
 func (w *WAL) Sync() error {
@@ -131,10 +138,35 @@ func (w *WAL) WriteEntry(entry *LogEntry) error {
 		return err
 	}
 	// write data
-	if _, err := w.bufWriter.Write(data); err != nil {
+	byteSize, err := w.bufWriter.Write(data)
+	if err != nil {
 		return err
 	}
 	w.bufWriter.Flush()
+	// update metadata
+	w.curIndex += binary.Size(int32(len(data))) + byteSize
+	w.metadata = append(w.metadata, w.curIndex)
+	return nil
+}
+
+func (w *WAL) TruncateAt(index int32) error {
+	// delete entry from WAL
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	// find the start of the entry
+	start := w.metadata[index]
+	// delete all bytes from the file after start
+	if err := os.Truncate(w.filename, int64(start)); err != nil {
+		return err
+	}
+	// update bufio writer
+	w.bufWriter = bufio.NewWriter(w.bufWriter)
+	w.bufWriter.Reset(w.bufWriter)
+	// set bufWrite to cursor at end of file
+	if _, err := w.bufWriter.WriteAt([]byte{}, int64(start)); err != nil {
+	// update metadata
+	w.metadata = w.metadata[:index]
+	w.curIndex = start
 	return nil
 }
 

@@ -82,3 +82,29 @@ func TestAppendEntry(t *testing.T) {
 		t.Errorf("Failed to write entry correctly to WAL. Expected: %v, Got: %v", entry, newEntry)
 	}
 }
+
+func TestLoadLog(t *testing.T) {
+	// Create a RaftLog object
+	ex, err := os.Executable()
+	if err != nil {
+		t.Errorf("Failed to get executable path")
+	}
+	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
+	raftLog := raftlog.NewRaftLog(filepath)
+
+	// Append an entry to the RaftLog
+	entry := &raftlog.LogEntry{
+		Term:    1,
+		Index:   1,
+		Command: "test",
+	}
+	raftLog.AppendEntry(entry)
+
+	// Load the log from the WAL
+	raftLog.LoadLog()
+
+	// Check if the log was loaded successfully
+	if raftLog.GetSize() != 1 {
+		t.Errorf("Failed to load log from WAL")
+	}
+}

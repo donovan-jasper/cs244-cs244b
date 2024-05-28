@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package raft;
 
-option go_package = "github.com/enigma/raft/pb";
+option go_package = "./goraft";
 
 // Define the Raft service with its RPC methods
 service Raft {
