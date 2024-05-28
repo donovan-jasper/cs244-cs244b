@@ -31,6 +31,8 @@ import (
 // wal of https://github.com/JyotinderSingh/go-wal as reference
 // assume file is int32 (chunk size), then the data itself
 
+var ()
+
 type WAL struct {
 	filename  string
 	file      *os.File
@@ -46,9 +48,28 @@ type RaftLog struct {
 	wal     *WAL
 }
 
-func NewWAL(filename string) *WAL {
+/**
+ * 4 scenarios:
+ * - file exists, loadBackup = false. Overwrite existing file
+ * - file exists, loadBackup = true. Load from backup
+ * - file does not exist, loadBackup = false. Create new file
+ * - file does not exist, loadBackup = true. Throw error
+ */
+func NewWAL(filename string, loadBackup bool) *WAL {
 	// only for writing
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	createNew := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	loadWithBackup := os.O_RDWR | os.O_APPEND
+	fileFlags := createNew
+
+	if loadBackup {
+		// check if file exists
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			log.Fatal("File does not exist")
+		}
+		fileFlags = loadWithBackup
+	}
+
+	file, err := os.OpenFile(filename, fileFlags, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,11 +86,18 @@ func NewWAL(filename string) *WAL {
 	return wal
 }
 
-func NewRaftLog(filename string) *RaftLog {
-	wal := NewWAL(filename)
+func NewRaftLog(filename string, loadBackup bool) *RaftLog {
+	wal := NewWAL(filename, loadBackup)
 	raftLog := &RaftLog{
 		entries: make([]*LogEntry, 0),
 		wal:     wal,
+	}
+	if loadBackup {
+		entries, err := raftLog.wal.readAllEntries(raftLog.wal.file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		raftLog.entries = entries
 	}
 	return raftLog
 }
@@ -163,7 +191,7 @@ func (w *WAL) TruncateAt(index int32) error {
 		return err
 	}
 
-	_, err := w.file.Seek(0, os.SEEK_END)
+	_, err := w.file.Seek(0, io.SeekEnd)
 	if err != nil {
 		log.Printf("Failed to seek to end of file: %v\n", err)
 		return err
@@ -179,6 +207,7 @@ func (w *WAL) TruncateAt(index int32) error {
 	return nil
 }
 
+// TOOD: should this be refactored to use it's own file?
 func (w *WAL) readAllEntries(file *os.File) ([]*LogEntry, error) {
 	// read all entries from file
 	var entries []*LogEntry

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,7 +25,7 @@ func TestCreateRaftLog(t *testing.T) {
 		t.Errorf("Failed to get executable path")
 	}
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
-	raftLog := raftlog.NewRaftLog(filepath)
+	raftLog := raftlog.NewRaftLog(filepath, false)
 
 	// Check if the RaftLog object is not nil
 	if raftLog == nil {
@@ -39,7 +40,7 @@ func TestAppendEntry(t *testing.T) {
 		t.Errorf("Failed to get executable path")
 	}
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
-	raftLog := raftlog.NewRaftLog(filepath)
+	rl := raftlog.NewRaftLog(filepath, false)
 
 	// Append an entry to the RaftLog
 	entry := &raftlog.LogEntry{
@@ -47,10 +48,10 @@ func TestAppendEntry(t *testing.T) {
 		Index:   1,
 		Command: "test",
 	}
-	raftLog.AppendEntry(entry)
+	rl.AppendEntry(entry)
 
 	// Check if the entry was appended successfully
-	if raftLog.GetSize() != 1 {
+	if rl.GetSize() != 1 {
 		t.Errorf("Failed to append entry to RaftLog")
 	}
 
@@ -95,7 +96,7 @@ func TestLoadLog(t *testing.T) {
 		t.Errorf("Failed to get executable path")
 	}
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
-	raftLog := raftlog.NewRaftLog(filepath)
+	rl := raftlog.NewRaftLog(filepath, false)
 
 	// Append an entry to the RaftLog
 	entry := &raftlog.LogEntry{
@@ -103,13 +104,13 @@ func TestLoadLog(t *testing.T) {
 		Index:   1,
 		Command: "test",
 	}
-	raftLog.AppendEntry(entry)
+	rl.AppendEntry(entry)
 
 	// Load the log from the WAL
-	raftLog.LoadLog()
+	rl.LoadLog()
 
 	// Check if the log was loaded successfully
-	if raftLog.GetSize() != 1 {
+	if rl.GetSize() != 1 {
 		t.Errorf("Failed to load log from WAL")
 	}
 }
@@ -121,7 +122,7 @@ func TestDeleteEntries(t *testing.T) {
 		t.Errorf("Failed to get executable path")
 	}
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
-	raftLog := raftlog.NewRaftLog(filepath)
+	rl := raftlog.NewRaftLog(filepath, false)
 
 	for i := 1; i <= 5; i++ {
 		// Append an entry to the RaftLog
@@ -130,14 +131,12 @@ func TestDeleteEntries(t *testing.T) {
 			Index:   int32(i),
 			Command: fmt.Sprintf("test%v", i),
 		}
-		raftLog.AppendEntry(entry)
+		rl.AppendEntry(entry)
 	}
 
 	// Truncate the log
-	raftLog.DeleteEntries(3)
+	rl.DeleteEntries(3)
 
 	// Check if the log was truncated successfully
-	if raftLog.GetSize() != 2 {
-		t.Errorf("Failed to truncate log")
-	}
+	assert.Equal(t, 2, rl.GetSize(), "Failed to truncate log")
 }
