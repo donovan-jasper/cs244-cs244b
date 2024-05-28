@@ -33,6 +33,7 @@ import (
 
 type WAL struct {
 	filename  string
+	file      *os.File
 	mu        sync.RWMutex
 	bufWriter *bufio.Writer
 	syncTimer *time.Timer
@@ -53,6 +54,7 @@ func NewWAL(filename string) *WAL {
 	}
 	wal := &WAL{
 		filename:  filename,
+		file:      file,
 		bufWriter: bufio.NewWriter(file),
 		syncTimer: time.NewTimer(100 * time.Millisecond),
 		ctx:       context.Background(),
@@ -156,14 +158,21 @@ func (w *WAL) TruncateAt(index int32) error {
 	// find the start of the entry
 	start := w.metadata[index]
 	// delete all bytes from the file after start
-	if err := os.Truncate(w.filename, int64(start)); err != nil {
+	if err := w.file.Truncate(int64(start)); err != nil {
+		log.Printf("Failed to truncate file: %v\n", err)
 		return err
 	}
-	// update bufio writer
-	w.bufWriter = bufio.NewWriter(w.bufWriter)
-	w.bufWriter.Reset(w.bufWriter)
-	// set bufWrite to cursor at end of file
-	if _, err := w.bufWriter.WriteAt([]byte{}, int64(start)); err != nil {
+
+	_, err := w.file.Seek(0, os.SEEK_END)
+	if err != nil {
+		log.Printf("Failed to seek to end of file: %v\n", err)
+		return err
+	}
+
+	// Reset the buffered writer with the new file position
+	w.bufWriter.Reset(w.file)
+
+	// TODO: FIX
 	// update metadata
 	w.metadata = w.metadata[:index]
 	w.curIndex = start
