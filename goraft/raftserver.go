@@ -17,11 +17,11 @@ const (
 	Leader
 )
 
-const HEARTBEAT_INTERVAL = 500
-const HEARTBEAT_TIMEOUT_MIN = 2000
-const HEARTBEAT_TIMEOUT_MAX = 5000
-const ELECTION_TIMEOUT_MIN = 2000
-const ELECTION_TIMEOUT_MAX = 5000
+const HEARTBEAT_INTERVAL = 2000 * 1000000
+const HEARTBEAT_TIMEOUT_MIN = 5000 * 1000000
+const HEARTBEAT_TIMEOUT_MAX = 10000 * 1000000
+const ELECTION_TIMEOUT_MIN = 5000 * 1000000
+const ELECTION_TIMEOUT_MAX = 10000 * 1000000
 
 type RaftServer struct {
 	id int
@@ -149,6 +149,7 @@ func (rs *RaftServer) doElection() {
 
 	for i := range len(rs.peers) {
 		if i != rs.id {
+			fmt.Println("Sending request vote request to", i)
 			// Send request vote to peer
 			reqVoteReq := &RequestVoteRequest{
 				Term:        int32(rs.currentTerm),
@@ -191,6 +192,7 @@ func (rs *RaftServer) handleMessage(msg string) {
 
 // TODO: Add logentries
 func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
+	fmt.Println("Handling append entries request")
 	if int(aeMsg.GetTerm()) > rs.currentTerm {
 		rs.currentTerm = int(aeMsg.GetTerm())
 		rs.votedFor = -1
@@ -298,6 +300,7 @@ func (rs *RaftServer) sendHeartbeats() {
 	for rs.loadCurrentState() == Leader {
 		for i := range len(rs.peers) {
 			if i != rs.id {
+				fmt.Println("Sending heartbeat to", i)
 				// TODO: Calculate real prevLogIndex
 				var prevLogIndex int32 = -1
 				// TODO: Calculate real prevLogTerm
@@ -328,8 +331,9 @@ func (rs *RaftServer) evaluateElection() {
 	for range rs.votesReceived {
 		numVotes++
 	}
-
-	if numVotes >= (len(rs.peers)+1.0)/2 {
+	fmt.Println(rs.id, "received", numVotes, "votes")
+	if float32(numVotes) >= (float32(len(rs.peers))+1.0)/2.0 {
+		fmt.Println("Election won")
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
 	}
@@ -363,5 +367,5 @@ func (rs *RaftServer) setLastState(s State) {
 }
 
 func randomDuration(min, max int) time.Duration {
-	return time.Duration(rand.Intn(max-min+1)+min) * time.Millisecond
+	return time.Duration((rand.Intn(max-min+1) + min))
 }

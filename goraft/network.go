@@ -31,8 +31,6 @@ func (n *NetworkModule) handleConnection(conn net.Conn) {
 	}
 
 	n.msgQueue <- string(buf[:msg])
-
-	fmt.Printf("Received message from client: %s\n", string(buf[:msg]))
 }
 
 func (n *NetworkModule) listen(port string) {
@@ -70,6 +68,4 @@ func (n *NetworkModule) send(serverAddr string, message string) {
 		fmt.Println("Error writing to server:", err.Error())
 		return
 	}
-
-	fmt.Println("Message sent to server:", message)
 }
