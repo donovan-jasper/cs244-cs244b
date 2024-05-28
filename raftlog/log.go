@@ -58,7 +58,7 @@ func NewWAL(filename string) *WAL {
 		bufWriter: bufio.NewWriter(file),
 		syncTimer: time.NewTimer(100 * time.Millisecond),
 		ctx:       context.Background(),
-		metadata:  make([]int32, 0),
+		metadata:  make([]int, 0),
 		curIndex:  0,
 	}
 	go wal.syncRoutine()
@@ -182,7 +182,6 @@ func (w *WAL) TruncateAt(index int32) error {
 func (w *WAL) readAllEntries(file *os.File) ([]*LogEntry, error) {
 	// read all entries from file
 	var entries []*LogEntry
-	// entries := make([]LogEntry, 0)
 	for {
 		var chunksize int32
 		// break at end of file or some error
@@ -204,6 +203,7 @@ func (w *WAL) readAllEntries(file *os.File) ([]*LogEntry, error) {
 		}
 
 		entries = append(entries, entry)
+		w.metadata = append(w.metadata, w.curIndex)
 	}
 	return entries, nil
 }

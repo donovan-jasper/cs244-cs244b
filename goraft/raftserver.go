@@ -218,13 +218,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 		Message: appEntriesResp,
 	}
 
-	serializedMsg, err := proto.Marshal(raftMsg)
-	if err != nil {
-		return err
-	}
-
-	addr := rs.peers[int(aeMsg.GetLeaderId)]
-	rs.net.send(addr.ip+":"+addr.port, serializedMsg)
+	rs.sendRaftMsg(int(aeMsg.GetLeaderId()), raftMsg)
 }
 
 func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesResponse) {
@@ -244,6 +238,53 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesRespon
 	}
 }
 
+func (rs *RaftServer) handleRequestVoteRequest(rvMsg *pb.RequestVoteRequest) {
+	if int(rvMsg.GetTerm()) > rs.currentTerm {
+		rs.currentTerm = int(rvMsg.GetTerm())
+		rs.setCurrentState(Follower)
+		rs.votedFor = -1
+	}
+
+	// TODO: Get last term from log
+	//lastTerm := rs.currentTerm
+
+	// TODO: Determine whether their log is up to dated
+	logUpdated := true
+	vote := false
+
+	// If these conditions are met, vote for candidate
+	if int(rvMsg.GetTerm()) >= rs.currentTerm && logUpdated && (rs.votedFor == -1 || rs.votedFor == int(rvMsg.GetCandidateId())) {
+		rs.votedFor = int(rvMsg.GetCandidateId())
+		vote = true
+
+		go rs.electionTimeoutTimer.Run()
+	}
+
+	requestVoteReplyMsg := &pb.RequestVoteResponse{
+		Term:        rs.currentTerm,
+		VoteGranted: vote,
+		VoterId:     rs.id,
+	}
+
+	raftMsg := &pb.RaftMessage{
+		Message: requestVoteReplyMsg,
+	}
+
+	rs.sendRaftMsg(int(rvMsg.GetCandidateId()), raftMsg)
+
+}
+
+func (rs *RaftServer) handleRequestVoteResponse(rvMsg *pb.RequestVoteResponse) {
+	if rs.loadCurrentState() == Candidate && int(rvMsg.GetTerm()) == rs.currentTerm && bool(rvMsg.GetVoteGranted) {
+		rs.votesReceived[int(rvMsg.GetVoterId())] = true
+		rs.evaluateElection()
+	} else if int(rvMsg.GetTerm()) > rs.currentTerm {
+		rs.currentTerm = int(rvMsg.GetTerm())
+		rs.setCurrentState(Follower)
+		rs.votedFor = -1
+	}
+}
+
 func (rs *RaftServer) evaluateElection() {
 	numVotes := 0
 	for range rs.votesReceived {
@@ -254,6 +295,17 @@ func (rs *RaftServer) evaluateElection() {
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
 	}
+}
+
+func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *pb.RaftMessage) {
+	serializedMsg, err := proto.Marshal(raftMsg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	addr := rs.peers[targetId]
+	rs.net.send(addr.ip+":"+addr.port, string(serializedMsg))
 }
 
 func (rs *RaftServer) loadCurrentState() State {

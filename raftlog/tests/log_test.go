@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 )
+
+func SameEntryDetails(a *raftlog.LogEntry, b *raftlog.LogEntry) bool {
+	return a.Term == b.Term && a.Index == b.Index && a.Command == b.Command
+}
 
 func TestCreateRaftLog(t *testing.T) {
 	// Create a RaftLog object
@@ -78,7 +83,7 @@ func TestAppendEntry(t *testing.T) {
 	}
 
 	// Check if the entry was written correctly to the WAL
-	if newEntry.Term != entry.Term || newEntry.Index != entry.Index || newEntry.Command != entry.Command {
+	if !SameEntryDetails(entry, newEntry) {
 		t.Errorf("Failed to write entry correctly to WAL. Expected: %v, Got: %v", entry, newEntry)
 	}
 }
@@ -106,5 +111,33 @@ func TestLoadLog(t *testing.T) {
 	// Check if the log was loaded successfully
 	if raftLog.GetSize() != 1 {
 		t.Errorf("Failed to load log from WAL")
+	}
+}
+
+func TestDeleteEntries(t *testing.T) {
+	// Create a RaftLog object
+	ex, err := os.Executable()
+	if err != nil {
+		t.Errorf("Failed to get executable path")
+	}
+	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
+	raftLog := raftlog.NewRaftLog(filepath)
+
+	for i := 1; i <= 5; i++ {
+		// Append an entry to the RaftLog
+		entry := &raftlog.LogEntry{
+			Term:    1,
+			Index:   int32(i),
+			Command: fmt.Sprintf("test%v", i),
+		}
+		raftLog.AppendEntry(entry)
+	}
+
+	// Truncate the log
+	raftLog.DeleteEntries(3)
+
+	// Check if the log was truncated successfully
+	if raftLog.GetSize() != 2 {
+		t.Errorf("Failed to truncate log")
 	}
 }

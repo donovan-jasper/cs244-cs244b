@@ -43,6 +43,7 @@ message RequestVoteRequest {
 message RequestVoteResponse {
   int32 term = 1;
   bool voteGranted = 2;
+  int32 voterId = 3;
 }
 
 message InstallSnapshotRequest {
