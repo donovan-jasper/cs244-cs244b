@@ -35,7 +35,8 @@ message AppendEntriesRequest {
 message AppendEntriesResponse {
   int32 term = 1;
   int32 followerId = 2;
-  bool success = 3;
+  int32 ackedId = 3;
+  bool success = 4;
 }
 
 message RequestVoteRequest {

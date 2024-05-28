@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -209,13 +208,23 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 
 	// Send AppendEntriesResponse to leader
 	appEntriesResp := &pb.AppendEntriesResponse{
-		Term:    int32(rs.currentTerm),
-		Fol
-		Success: true,
+		Term:     int32(rs.currentTerm),
+		Follower: int32(rs.id),
+		// TODO: Set real acked index
+		AckedIndex: int32(-1),
+		Success:    true,
 	}
-	var raftMsg pb.RaftMessage
-	appEntriesResp.
-	rs.net.send()
+	raftMsg := &pb.RaftMessage{
+		Message: appEntriesResp,
+	}
+
+	serializedMsg, err := proto.Marshal(raftMsg)
+	if err != nil {
+		return err
+	}
+
+	addr := rs.peers[int(aeMsg.GetLeaderId)]
+	rs.net.send(addr.ip+":"+addr.port, serializedMsg)
 }
 
 func (rs *RaftServer) evaluateElection() {
