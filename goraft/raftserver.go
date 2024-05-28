@@ -141,10 +141,22 @@ func (rs *RaftServer) doElection() {
 		}
 	*/
 
-	for i, addr := range rs.peers {
+	for i := range len(rs.peers) {
 		if i != rs.id {
-			// TODO: Send RequestVote RPC
-			fmt.Println(addr)
+			// Send request vote to peer
+			reqVoteReq := &RequestVoteRequest{
+				Term:        int32(rs.currentTerm),
+				CandidateId: int32(rs.id),
+				// TODO: Set real last log index
+				LastLogIndex: -1,
+				// TODO: Set real last log term
+				LastLogTerm: int32(rs.currentTerm) - 1,
+			}
+			raftMsg := &RaftMessage{
+				Message: &RaftMessage_RequestVoteRequest{reqVoteReq},
+			}
+
+			rs.sendRaftMsg(i, raftMsg)
 		}
 	}
 
