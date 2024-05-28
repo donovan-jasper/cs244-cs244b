@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,10 +21,6 @@ type RaftServer struct {
 	id int
 	// Network addresses of cluster peers
 	peers []Address
-
-	// Queue things
-	mu    sync.Mutex
-	queue []proto.Message
 
 	// Persistent state
 	currentTerm int
@@ -92,7 +87,7 @@ func NewRaftServer(id int, peers []Address, restoreFromDisk bool) *RaftServer {
 }
 
 func (rs *RaftServer) run() {
-	rs.net.listen(rs.peers[rs.id].port)
+	go rs.net.listen(rs.peers[rs.id].port)
 
 	for {
 		rs.setLastState(rs.loadCurrentState())
