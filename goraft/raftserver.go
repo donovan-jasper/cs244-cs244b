@@ -3,8 +3,14 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	pb "github.com/enigma/raft/pb"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type State int32
@@ -19,6 +25,10 @@ type RaftServer struct {
 	id int
 	// Network addresses of cluster peers
 	peers []string
+
+	// Queue things
+	mu       sync.Mutex
+	queue    []proto.Message
 
 	// Persistent state
 	currentTerm int
@@ -39,7 +49,8 @@ type RaftServer struct {
 	nextIndex     []int
 	ackedIndex    []int
 
-	// TODO: Add network module?
+	net 		  *NetworkModule
+
 	heartbeatTimeoutTimer *Timer
 	electionTimeoutTimer  *Timer
 
@@ -54,7 +65,7 @@ func setStateToFollowerCB(rs *RaftServer) {
 	rs.setCurrentState(Follower)
 }
 
-func NewRaftServer(id int, peers []string, restoreFromDisk bool) *RaftServer {
+func NewRaftServer(id int, peers []Address, restoreFromDisk bool) *RaftServer {
 	rs := new(RaftServer)
 	rs.id = id
 	rs.peers = peers
@@ -75,6 +86,8 @@ func NewRaftServer(id int, peers []string, restoreFromDisk bool) *RaftServer {
 		rs.ackedIndex[i] = -1
 	}
 
+	rs.net := NewNetworkModule()
+
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToCandidateCB)
 	rs.electionTimeoutTimer = NewTimer(randomDuration(1000000000, 2000000000), rs, setStateToFollowerCB)
 
@@ -82,7 +95,7 @@ func NewRaftServer(id int, peers []string, restoreFromDisk bool) *RaftServer {
 }
 
 func (rs *RaftServer) run() {
-	// TODO: Start thread to apply committed logs
+	rs.net.listen(rs.peerAddresses[rs.id].port)
 
 	for {
 		rs.setLastState(rs.loadCurrentState())
@@ -97,7 +110,9 @@ func (rs *RaftServer) run() {
 		}
 
 		for rs.loadCurrentState() == rs.loadLastState() {
-			// TODO: Handle network messages
+			var msg string
+			msg <- n.msgQueue
+			rs.handleMessage(msg)
 		}
 
 		rs.heartbeatTimeoutTimer.Stop()
@@ -135,6 +150,30 @@ func (rs *RaftServer) doElection() {
 	}
 
 	rs.evaluateElection()
+}
+
+func (rs *RaftServer) handleMessage(msg string) {
+	var raftMsg pb.RaftMessage
+	if err := proto.Unmarshal(data, &raftMsg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+
+	switch msg := raftMsg.Message.(type) {
+	case *pb.RaftMessage_AppendEntriesRequest:
+		rs.handleAppendEntriesRequest(msg.AppendEntriesRequest)
+	case *pb.RaftMessage_AppendEntriesResponse:
+		rs.handleAppendEntriesResponse(msg.AppendEntriesResponse)
+	case *pb.RaftMessage_RequestVoteRequest:
+		rs.handleRequestVoteRequest(msg.RequestVoteRequest)
+	case *pb.RaftMessage_RequestVoteResponse:
+		rs.handleRequestVoteResponse(msg.RequestVoteResponse)
+	default:
+		return fmt.Errorf("unknown message type")
+	}
+} 
+
+func (rs *RaftMessage) handleAppendEntriesRequest() {
+	
 }
 
 func (rs *RaftServer) evaluateElection() {

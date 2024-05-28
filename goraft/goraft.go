@@ -18,8 +18,23 @@ func main() {
 		return
 	}
 
-	peerAddresses := os.Args[2:]
+	peerAddressesStrs := os.Args[2:]
+	var peerAddresses []Address
 
+	for _, str := range peerAddressesStrs {
+		parts := strings.Split(str, ":")
+		if len(parts) == 2 {
+			addr := Address{
+				ip: parts[0]
+				port: parts[1]
+			}
+			peerAddresses.append(peerAddresses, addr)
+		} else {
+			// TODO: error
+		}
+	}
+
+	// TODO: Take in shouldRestore from command line
 	shouldRestore := false
 	rs := NewRaftServer(server_id, peerAddresses, shouldRestore)
 	rs.run()

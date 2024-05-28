@@ -10,20 +10,32 @@ type Address struct {
 	port string
 }
 
-func handleConnection(conn net.Conn) {
+type NetworkModule struct {
+	msgQueue chan string
+}
+
+func NewNetworkModule() *NetworkModule {
+	return &NetworkModule{
+		msgQueue: make(chan string)
+	}
+} 
+
+func (n *Network) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 		return
 	}
 
+	n <- string(buf[:n])
+
 	fmt.Printf("Received message from client: %s\n", string(buf[:n]))
 }
 
-func listen(port string) {
+func (n *Network) listen(port string) {
 
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -45,7 +57,7 @@ func listen(port string) {
 	}
 }
 
-func send(serverAddr string, message string) {
+func (n *Network) send(serverAddr string, message string) {
 	conn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		fmt.Println("Error connecting to server:", err.Error())
