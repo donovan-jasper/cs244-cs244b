@@ -207,6 +207,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 	}
 
 	// Send AppendEntriesResponse to leader
+
 }
 
 func (rs *RaftServer) evaluateElection() {
