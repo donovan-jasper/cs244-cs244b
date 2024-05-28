@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -207,7 +208,14 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 	}
 
 	// Send AppendEntriesResponse to leader
-
+	appEntriesResp := &pb.AppendEntriesResponse{
+		Term:    int32(rs.currentTerm),
+		Fol
+		Success: true,
+	}
+	var raftMsg pb.RaftMessage
+	appEntriesResp.
+	rs.net.send()
 }
 
 func (rs *RaftServer) evaluateElection() {
