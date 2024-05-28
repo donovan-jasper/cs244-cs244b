@@ -128,7 +128,7 @@ func (r *RaftLog) GetSize() int32 {
 }
 
 func (r *RaftLog) DeleteEntries(index int32) {
-	r.entries = append(r.entries[:index], r.entries[index+1:]...)
+	r.entries = r.entries[:index]
 	// TODO: delete entry from WAL
 	r.wal.TruncateAt(index)
 }

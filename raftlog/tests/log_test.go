@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,24 +22,19 @@ func SameEntryDetails(a *raftlog.LogEntry, b *raftlog.LogEntry) bool {
 func TestCreateRaftLog(t *testing.T) {
 	// Create a RaftLog object
 	ex, err := os.Executable()
-	if err != nil {
-		t.Errorf("Failed to get executable path")
-	}
+	require.NoError(t, err, "Failed to get executable path")
+
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
 	raftLog := raftlog.NewRaftLog(filepath, false)
 
 	// Check if the RaftLog object is not nil
-	if raftLog == nil {
-		t.Errorf("Failed to create RaftLog object")
-	}
+	require.NotNil(t, raftLog, "Failed to create RaftLog object")
 }
 
 func TestAppendEntry(t *testing.T) {
 	// Create a RaftLog object
 	ex, err := os.Executable()
-	if err != nil {
-		t.Errorf("Failed to get executable path")
-	}
+	require.NoError(t, err)
 	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
 	rl := raftlog.NewRaftLog(filepath, false)
 
@@ -51,25 +47,19 @@ func TestAppendEntry(t *testing.T) {
 	rl.AppendEntry(entry)
 
 	// Check if the entry was appended successfully
-	if rl.GetSize() != 1 {
-		t.Errorf("Failed to append entry to RaftLog")
-	}
+	require.Equal(t, int32(1), rl.GetSize(), "Failed to append entry to RaftLog")
 
 	time.Sleep(1000 * time.Millisecond)
 	// check if the entry was written to the WAL
 	fileInfo, err := os.Stat(filepath)
-	if err != nil {
-		t.Errorf("Failed to get file info")
-	}
-	if fileInfo.Size() == 0 {
-		t.Errorf("Failed to write entry to WAL, file size is 0")
-	}
+	require.NoError(t, err)
+
+	require.NotEqual(t, int64(0), fileInfo.Size(), "Failed to write entry to WAL, file size is 0")
 
 	// print contents of file
 	file, err := os.Open(filepath)
-	if err != nil {
-		t.Errorf("Failed to open file")
-	}
+	require.NoError(t, err)
+
 	defer file.Close()
 	var chunksize uint32
 	newEntry := &raftlog.LogEntry{}
@@ -110,9 +100,31 @@ func TestLoadLog(t *testing.T) {
 	rl.LoadLog()
 
 	// Check if the log was loaded successfully
-	if rl.GetSize() != 1 {
-		t.Errorf("Failed to load log from WAL")
+	assert.Equal(t, int32(1), rl.GetSize(), "Failed to load log from WAL")
+}
+
+func TestBackupLog(t *testing.T) {
+	// Create a RaftLog object
+	ex, err := os.Executable()
+	if err != nil {
+		t.Errorf("Failed to get executable path")
 	}
+	filepath := filepath.Join(filepath.Dir(ex), "test_wal")
+	rl := raftlog.NewRaftLog(filepath, false)
+
+	// Append an entry to the RaftLog
+	entry := &raftlog.LogEntry{
+		Term:    1,
+		Index:   1,
+		Command: "test",
+	}
+	rl.AppendEntry(entry)
+
+	// Backup the log
+	rl = raftlog.NewRaftLog(filepath, true)
+
+	// Check if the log was backed up successfully
+	assert.Truef(t, SameEntryDetails(entry, rl.GetEntry(0)), "Incorrect entry after backup. Expected: %#v, Got: %#v", entry, rl.GetEntry(0))
 }
 
 func TestDeleteEntries(t *testing.T) {
@@ -138,5 +150,5 @@ func TestDeleteEntries(t *testing.T) {
 	rl.DeleteEntries(3)
 
 	// Check if the log was truncated successfully
-	assert.Equal(t, 2, rl.GetSize(), "Failed to truncate log")
+	assert.Equal(t, int32(3), rl.GetSize(), "Failed to truncate log")
 }
