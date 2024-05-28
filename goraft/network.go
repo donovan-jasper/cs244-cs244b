@@ -20,7 +20,7 @@ func NewNetworkModule() *NetworkModule {
 	}
 } 
 
-func (n *Network) handleConnection(conn net.Conn) {
+func (n *NetworkModule) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	buf := make([]byte, 4096)
@@ -35,7 +35,7 @@ func (n *Network) handleConnection(conn net.Conn) {
 	fmt.Printf("Received message from client: %s\n", string(buf[:n]))
 }
 
-func (n *Network) listen(port string) {
+func (n *NetworkModule) listen(port string) {
 
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -57,7 +57,7 @@ func (n *Network) listen(port string) {
 	}
 }
 
-func (n *Network) send(serverAddr string, message string) {
+func (n *NetworkModule) send(serverAddr string, message string) {
 	conn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		fmt.Println("Error connecting to server:", err.Error())
