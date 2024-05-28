@@ -111,6 +111,7 @@ func (rs *RaftServer) run() {
 			select {
 			case msg, ok := <-rs.net.msgQueue:
 				if ok {
+					fmt.Println("Received a message")
 					rs.handleMessage(msg)
 				} else {
 					fmt.Println("Channel closed!")
@@ -121,6 +122,7 @@ func (rs *RaftServer) run() {
 		}
 
 		rs.heartbeatTimeoutTimer.Stop()
+		rs.electionTimeoutTimer.Stop()
 
 		// TODO: Stop leader heartbeat thread
 	}
@@ -233,6 +235,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 }
 
 func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *AppendEntriesResponse) {
+	fmt.Println("Handling append entries response with term", aerMsg.GetTerm())
 	if int(aerMsg.GetTerm()) == rs.currentTerm && rs.loadCurrentState() == Leader {
 		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
 			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
@@ -243,6 +246,7 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *AppendEntriesResponse)
 			// TODO: Replicate log to other servers
 		}
 	} else if int(aerMsg.GetTerm()) > rs.currentTerm {
+		fmt.Println("Received append entries response with higher term")
 		rs.currentTerm = int(aerMsg.GetTerm())
 		rs.setCurrentState(Follower)
 		rs.votedFor = -1
@@ -250,6 +254,7 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *AppendEntriesResponse)
 }
 
 func (rs *RaftServer) handleRequestVoteRequest(rvMsg *RequestVoteRequest) {
+	fmt.Println("Handling request vote request")
 	if int(rvMsg.GetTerm()) > rs.currentTerm {
 		rs.currentTerm = int(rvMsg.GetTerm())
 		rs.setCurrentState(Follower)
@@ -286,6 +291,7 @@ func (rs *RaftServer) handleRequestVoteRequest(rvMsg *RequestVoteRequest) {
 }
 
 func (rs *RaftServer) handleRequestVoteResponse(rvMsg *RequestVoteResponse) {
+	fmt.Println("Handling request vote response")
 	if rs.loadCurrentState() == Candidate && int(rvMsg.GetTerm()) == rs.currentTerm && bool(rvMsg.GetVoteGranted()) {
 		rs.votesReceived[int(rvMsg.GetVoterId())] = true
 		rs.evaluateElection()
@@ -319,6 +325,7 @@ func (rs *RaftServer) sendHeartbeats() {
 				}
 
 				rs.sendRaftMsg(i, raftMsg)
+				fmt.Println("Send to", i, "completed")
 			}
 		}
 
