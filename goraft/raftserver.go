@@ -212,7 +212,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 		Follower: int32(rs.id),
 		// TODO: Set real acked index
 		AckedIndex: int32(-1),
-		Success:    true,
+		Success:    success,
 	}
 	raftMsg := &pb.RaftMessage{
 		Message: appEntriesResp,
@@ -225,6 +225,23 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 
 	addr := rs.peers[int(aeMsg.GetLeaderId)]
 	rs.net.send(addr.ip+":"+addr.port, serializedMsg)
+}
+
+func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesResponse) {
+	if int(aerMsg.GetTerm()) == rs.currentTerm && rs.loadCurrentState() == Leader {
+		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
+			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
+			rs.ackedIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx()) - 1
+			// TODO: Commit log entry
+		} else if rs.nextIndex[int(aerMsg.GetFollowerId())] > 0 {
+			rs.nextIndex[int(aerMsg.GetFollowerId())]--
+			// TODO: Replicate log to other servers
+		}
+	} else if int(aerMsg.GetTerm()) > rs.currentTerm {
+		rs.currentTerm = int(aerMsg.GetTerm())
+		rs.setCurrentState(Follower)
+		rs.votedFor = -1
+	}
 }
 
 func (rs *RaftServer) evaluateElection() {
