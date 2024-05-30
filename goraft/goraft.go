@@ -1,4 +1,4 @@
-package goraft
+package main
 
 import (
 	"cs244_cs244b/goraft/raftserver"
@@ -37,11 +37,7 @@ func main() {
 		}
 	}
 
-	ex, err := os.Executable()
-	if err != nil {
-		fmt.Errorf("Failed to get executable path")
-	}
-	backupDir := filepath.Join(ex, "/backup-")
+	backupDir := "./backups"
 
 	// TODO: Take in shouldRestore from command line
 	shouldRestore := false
