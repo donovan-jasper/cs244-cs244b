@@ -1,4 +1,4 @@
-package main
+package raftserver
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+
+	"cs244_cs244b/goraft/raftserver/raftlog"
 )
 
 type State int32
@@ -31,7 +33,7 @@ type RaftServer struct {
 	// Persistent state
 	currentTerm int
 	votedFor    int
-	// TODO: Add log entries
+	logEntries  *raftlog.RaftLog
 
 	// TODO: Add persistant storage mechanism
 
@@ -63,13 +65,14 @@ func setStateToFollowerCB(rs *RaftServer) {
 	rs.setCurrentState(Follower)
 }
 
-func NewRaftServer(id int, peers []Address, restoreFromDisk bool) *RaftServer {
+func NewRaftServer(id int, peers []Address, backupFilepath string, restoreFromDisk bool) *RaftServer {
 	rs := new(RaftServer)
 	rs.id = id
 	rs.peers = peers
 	rs.currentTerm = 0
 	rs.votedFor = -1
-	// TODO: Restore from log based on bool
+
+	rs.logEntries = raftlog.NewRaftLog(backupFilepath, restoreFromDisk)
 
 	rs.setCurrentState(Follower)
 	rs.setLastState(Follower)
@@ -92,8 +95,8 @@ func NewRaftServer(id int, peers []Address, restoreFromDisk bool) *RaftServer {
 	return rs
 }
 
-func (rs *RaftServer) run() {
-	go rs.net.listen(rs.peers[rs.id].port)
+func (rs *RaftServer) Run() {
+	go rs.net.listen(rs.peers[rs.id].Port)
 
 	for {
 		rs.setLastState(rs.loadCurrentState())
@@ -123,8 +126,6 @@ func (rs *RaftServer) run() {
 
 		rs.heartbeatTimeoutTimer.Stop()
 		rs.electionTimeoutTimer.Stop()
-
-		// TODO: Stop leader heartbeat thread
 	}
 }
 
@@ -138,28 +139,28 @@ func (rs *RaftServer) doElection() {
 
 	go rs.electionTimeoutTimer.Run()
 
-	// TODO: Update and uncomment
-	/*
-		var lastLogIndex int
-		var lastLogTerm int
-		if len(rs.log == 0) {
+	logSize := rs.logEntries.GetSize()
+	var lastLogIndex int32
+	var lastLogTerm int32
 
-		} else {
-
-		}
-	*/
+	if logSize == 0 {
+		lastLogIndex = -1
+		lastLogTerm = 0
+	} else {
+		lastLog := rs.logEntries.GetLastEntry()
+		lastLogIndex = lastLog.Index
+		lastLogTerm = lastLog.Term
+	}
 
 	for i := range len(rs.peers) {
 		if i != rs.id {
 			fmt.Println("Sending request vote request to", i)
 			// Send request vote to peer
 			reqVoteReq := &RequestVoteRequest{
-				Term:        int32(rs.currentTerm),
-				CandidateId: int32(rs.id),
-				// TODO: Set real last log index
-				LastLogIndex: -1,
-				// TODO: Set real last log term
-				LastLogTerm: int32(rs.currentTerm) - 1,
+				Term:         int32(rs.currentTerm),
+				CandidateId:  int32(rs.id),
+				LastLogIndex: lastLogIndex,
+				LastLogTerm:  lastLogTerm,
 			}
 			raftMsg := &RaftMessage{
 				Message: &RaftMessage_RequestVoteRequest{reqVoteReq},
@@ -192,7 +193,6 @@ func (rs *RaftServer) handleMessage(msg string) {
 	}
 }
 
-// TODO: Add logentries
 func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 	fmt.Println("Handling append entries request")
 	if int(aeMsg.GetTerm()) > rs.currentTerm {
@@ -205,17 +205,26 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 		rs.setCurrentState(Follower)
 		rs.currentLeader = int(aeMsg.GetLeaderId())
 
-		// TODO: Check log lengths
-		logChecksOut := true
+		logChecksOut := false
+		if rs.logEntries.GetSize() > aeMsg.PrevLogIndex && (aeMsg.PrevLogIndex == -1 || rs.logEntries.GetEntry(aeMsg.PrevLogIndex).Term == aeMsg.Term) {
+			logChecksOut = true
+		}
 
 		if logChecksOut {
 			success = true
 			rs.heartbeatTimeoutTimer.Stop()
 			go rs.heartbeatTimeoutTimer.Run()
 
-			// TODO: Remove all inconsistent entries and append new ones
+			// Replace inconsistent logs
+			rs.logEntries.DeleteEntries(aeMsg.PrevLogIndex + 1)
+			for i := 0; i < len(aeMsg.Entries); i++ {
+				rs.logEntries.AppendEntry(aeMsg.Entries[i])
+			}
 
-			// TODO: Commit entries that have been committed by the leader
+			if aeMsg.LeaderCommit > rs.commitIndex {
+				rs.commitIndex = min(aeMsg.LeaderCommit, rs.logEntries.GetSize()-1)
+				// TODO: Queue committed log entries for application
+			}
 		}
 	}
 
@@ -223,9 +232,8 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 	appEntriesResp := &AppendEntriesResponse{
 		Term:       int32(rs.currentTerm),
 		FollowerId: int32(rs.id),
-		// TODO: Set real acked index
-		AckedIdx: int32(-1),
-		Success:  success,
+		AckedIdx:   aeMsg.PrevLogIndex + int32(len(aeMsg.Entries)),
+		Success:    success,
 	}
 	raftMsg := &RaftMessage{
 		Message: &RaftMessage_AppendEntriesResponse{appEntriesResp},
@@ -240,10 +248,10 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *AppendEntriesResponse)
 		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
 			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
 			rs.ackedIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx()) - 1
-			// TODO: Commit log entry
+			rs.commitLogs()
 		} else if rs.nextIndex[int(aerMsg.GetFollowerId())] > 0 {
 			rs.nextIndex[int(aerMsg.GetFollowerId())]--
-			// TODO: Replicate log to other servers
+			rs.replicateLogs(rs.id, int(aerMsg.GetFollowerId()))
 		}
 	} else if int(aerMsg.GetTerm()) > rs.currentTerm {
 		fmt.Println("Received append entries response with higher term")
@@ -261,11 +269,14 @@ func (rs *RaftServer) handleRequestVoteRequest(rvMsg *RequestVoteRequest) {
 		rs.votedFor = -1
 	}
 
-	// TODO: Get last term from log
-	//lastTerm := rs.currentTerm
+	var lastTerm int32 = 0
+	logSize := rs.logEntries.GetSize()
+	if logSize != 0 {
+		lastTerm = rs.logEntries.GetLastEntry().Term
+	}
 
-	// TODO: Determine whether their log is up to dated
-	logUpdated := true
+	// Determine whether the candidate log is up to date
+	logUpdated := (rvMsg.LastLogTerm > lastTerm) || (rvMsg.LastLogTerm == lastTerm && rvMsg.LastLogIndex >= rs.logEntries.GetLastIndex())
 	vote := false
 
 	// If these conditions are met, vote for candidate
@@ -307,10 +318,12 @@ func (rs *RaftServer) sendHeartbeats() {
 		for i := range len(rs.peers) {
 			if i != rs.id {
 				fmt.Println("Sending heartbeat to", i)
-				// TODO: Calculate real prevLogIndex
 				var prevLogIndex int32 = -1
-				// TODO: Calculate real prevLogTerm
 				var prevLogTerm int32 = 0
+				if rs.logEntries.GetSize() != 0 {
+					prevLogIndex = rs.logEntries.GetLastEntry().GetIndex()
+					prevLogTerm = rs.logEntries.GetLastEntry().Term
+				}
 
 				// Create AppendEntries message and send
 				appEntriesReq := &AppendEntriesRequest{
@@ -331,6 +344,55 @@ func (rs *RaftServer) sendHeartbeats() {
 
 		time.Sleep(HEARTBEAT_INTERVAL)
 	}
+}
+
+func (rs *RaftServer) commitLogs() {
+	for i := rs.commitIndex + 1; i < rs.logEntries.GetSize(); i++ {
+		numAcks := 1
+		for _, idx := range rs.ackedIndex {
+			if int32(idx) >= i {
+				numAcks++
+			}
+
+			if float32(numAcks) >= (float32(len(rs.peers))+1.0)/2.0 {
+				rs.commitIndex = i
+				// TODO: Queue log to be applied
+			} else {
+				break
+			}
+		}
+	}
+	// TODO: Save to permanent storage
+}
+
+func (rs *RaftServer) replicateLogs(leaderId, followerId int) {
+	var entriesAlreadySent int32 = int32(rs.nextIndex[followerId])
+	var toReplicate []*raftlog.LogEntry
+
+	if entriesAlreadySent < rs.logEntries.GetSize() {
+		for i := int32(max(0, entriesAlreadySent)); i < rs.logEntries.GetSize(); i++ {
+			toReplicate = append(toReplicate, rs.logEntries.GetEntry(i))
+		}
+	}
+
+	var lastValidTerm int32 = 0
+	if entriesAlreadySent > 0 {
+		lastValidTerm = rs.logEntries.GetEntry(entriesAlreadySent - 1).Term
+	}
+
+	appEntriesReq := &AppendEntriesRequest{
+		Term:         int32(rs.currentTerm),
+		LeaderId:     int32(leaderId),
+		PrevLogIndex: entriesAlreadySent - 1,
+		PrevLogTerm:  lastValidTerm,
+		LeaderCommit: atomic.LoadInt32(&rs.commitIndex),
+		Entries:      toReplicate,
+	}
+	raftMsg := &RaftMessage{
+		Message: &RaftMessage_AppendEntriesRequest{appEntriesReq},
+	}
+
+	rs.sendRaftMsg(followerId, raftMsg)
 }
 
 func (rs *RaftServer) evaluateElection() {
@@ -354,7 +416,7 @@ func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *RaftMessage) {
 	}
 
 	addr := rs.peers[targetId]
-	rs.net.send(addr.ip+":"+addr.port, string(serializedMsg))
+	rs.net.send(addr.Ip+":"+addr.Port, string(serializedMsg))
 }
 
 func (rs *RaftServer) loadCurrentState() State {

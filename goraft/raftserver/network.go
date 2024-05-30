@@ -1,4 +1,4 @@
-package main
+package raftserver
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 )
 
 type Address struct {
-	ip   string
-	port string
+	Ip   string
+	Port string
 }
 
 type NetworkModule struct {

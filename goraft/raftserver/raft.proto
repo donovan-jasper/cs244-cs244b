@@ -1,8 +1,10 @@
 syntax = "proto3";
 
-package raft;
+package raftserver;
 
-option go_package = "./main";
+import "cs244_cs244b/goraft/raftserver/raftlog/log_entry.proto";
+
+option go_package = "./raftserver";
 
 
 message RaftMessage {
@@ -22,7 +24,7 @@ message AppendEntriesRequest {
   int32 leaderId = 2;
   int32 prevLogIndex = 3;
   int32 prevLogTerm = 4;
-  repeated Entry entries = 5;
+  repeated LogEntry entries = 5;
   int32 leaderCommit = 6;
 }
 
@@ -57,10 +59,4 @@ message InstallSnapshotRequest {
 message InstallSnapshotResponse {
   int32 term = 1;
   bool success = 2;
-}
-
-message Entry {
-  int32 index = 1;
-  int32 term = 2;
-  string command = 3;
 }

@@ -1,8 +1,10 @@
-package main
+package goraft
 
 import (
+	"cs244_cs244b/goraft/raftserver"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -20,14 +22,14 @@ func main() {
 	}
 
 	peerAddressesStrs := os.Args[2:]
-	var peerAddresses []Address
+	var peerAddresses []raftserver.Address
 
 	for _, str := range peerAddressesStrs {
 		parts := strings.Split(str, ":")
 		if len(parts) == 2 {
-			addr := Address{
-				ip:   parts[0],
-				port: parts[1],
+			addr := raftserver.Address{
+				Ip:   parts[0],
+				Port: parts[1],
 			}
 			peerAddresses = append(peerAddresses, addr)
 		} else {
@@ -35,8 +37,14 @@ func main() {
 		}
 	}
 
+	ex, err := os.Executable()
+	if err != nil {
+		fmt.Errorf("Failed to get executable path")
+	}
+	backupDir := filepath.Join(ex, "/backup-")
+
 	// TODO: Take in shouldRestore from command line
 	shouldRestore := false
-	rs := NewRaftServer(server_id, peerAddresses, shouldRestore)
-	rs.run()
+	rs := raftserver.NewRaftServer(server_id, peerAddresses, filepath.Join(backupDir, strconv.Itoa(server_id)), shouldRestore)
+	rs.Run()
 }
