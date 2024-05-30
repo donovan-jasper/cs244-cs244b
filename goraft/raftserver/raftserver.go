@@ -216,7 +216,9 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 			go rs.heartbeatTimeoutTimer.Run()
 
 			// Replace inconsistent logs
-			rs.logEntries.DeleteEntries(aeMsg.PrevLogIndex + 1)
+			if rs.logEntries.GetLastIndex() > aeMsg.PrevLogIndex {
+				rs.logEntries.DeleteEntries(aeMsg.PrevLogIndex + 1)
+			}
 			for i := 0; i < len(aeMsg.Entries); i++ {
 				rs.logEntries.AppendEntry(aeMsg.Entries[i])
 			}
