@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	sync "sync"
 	"sync/atomic"
 	"time"
 
@@ -13,6 +14,30 @@ import (
 )
 
 type State int32
+
+// DNS Records map hostname to ip
+type DNSRecord struct {
+	Hostname string
+	IP       string
+	TTL      time.Duration
+	Added    time.Time
+}
+
+type LogEntryType int32
+
+// apply types
+const (
+	AddRecord LogEntryType = iota
+	DeleteRecord
+	ReadRecord
+)
+
+type DNSLogEntry struct {
+	Type   LogEntryType
+	Domain string
+	IP     string
+	TTL    time.Duration
+}
 
 const (
 	Follower State = iota
@@ -57,6 +82,54 @@ type RaftServer struct {
 
 	// TODO: Apply logs in background
 	logApplicationQueue chan raftlog.LogEntry
+
+	// DNS stuffs
+	dnsRecords map[string]DNSRecord
+	dnsMu      sync.Mutex
+}
+
+// ApplyLog applies a log entry to the DNS server
+func (rs *RaftServer) ApplyDNSLog(entry *DNSLogEntry) {
+	rs.dnsMu.Lock()
+	defer rs.dnsMu.Unlock()
+
+	// Lazy timeout mechanism: delete expired records
+	for domain, record := range rs.dnsRecords {
+		if time.Since(record.Added) > record.TTL {
+			delete(rs.dnsRecords, domain)
+		}
+	}
+
+	switch entry.Type {
+	case AddRecord:
+		rs.dnsRecords[entry.Domain] = DNSRecord{
+			Domain: entry.Domain,
+			IP:     entry.IP,
+			TTL:    entry.TTL,
+			Added:  time.Now(),
+		}
+	case DeleteRecord:
+		delete(rs.dnsRecords, entry.Domain)
+	case ReadRecord:
+		// handle elsewhere?
+	}
+}
+
+// ApplyLogs applies all committed logs to the DNS server
+func (rs *RaftServer) ApplyDNSLogs() {
+	rs.dnsMu.Lock()
+	defer rs.dnsMu.Unlock()
+
+	for rs.lastApplied < rs.commitIndex {
+		rs.lastApplied++
+		entry := rs.logEntries.GetEntry(rs.lastApplied)
+		dnsLogEntry := &DNSLogEntry{}
+		if err := proto.Unmarshal(entry.Data, dnsLogEntry); err != nil {
+			fmt.Println("Failed to unmarshal log entry:", err)
+			continue
+		}
+		rs.ApplyDNSLog(dnsLogEntry)
+	}
 }
 
 func setStateToCandidateCB(rs *RaftServer) {
@@ -93,6 +166,8 @@ func NewRaftServer(id int, peers []Address, backupFilepath string, restoreFromDi
 
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
 	rs.electionTimeoutTimer = NewTimer(randomDuration(ELECTION_TIMEOUT_MIN, ELECTION_TIMEOUT_MAX), rs, setStateToFollowerCB)
+
+	rs.dnsRecords = make(map[string]DNSRecord) // init dns table
 
 	return rs
 }
