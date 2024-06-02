@@ -3,6 +3,7 @@ package raftserver
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -55,6 +56,7 @@ type RaftServer struct {
 	electionTimeoutTimer  *Timer
 
 	// TODO: Apply logs in background
+	logApplicationQueue chan raftlog.LogEntry
 }
 
 func setStateToCandidateCB(rs *RaftServer) {
@@ -397,6 +399,18 @@ func (rs *RaftServer) replicateLogs(leaderId, followerId int) {
 	rs.sendRaftMsg(followerId, raftMsg)
 }
 
+func (rs *RaftServer) applyQueuedLogs() {
+	for {
+		log := <-rs.logApplicationQueue
+		fmt.Println("log to apply", log.Command)
+		//TODO: Call state machine apply function
+
+		if rs.loadCurrentState() == Leader {
+			rs.replyToClient("TODO: real output", log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
+		}
+	}
+}
+
 func (rs *RaftServer) evaluateElection() {
 	numVotes := 0
 	for range rs.votesReceived {
@@ -408,6 +422,24 @@ func (rs *RaftServer) evaluateElection() {
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
 	}
+}
+
+func (rs *RaftServer) replyToClient(output string, addr string) {
+	clientReply := &ClientReply{
+		Output:     output,
+		LeaderAddr: rs.peers[rs.id].Ip + ":" + rs.peers[rs.id].Port,
+		LeaderId:   int32(rs.id),
+	}
+	raftMsg := &RaftMessage{
+		Message: &RaftMessage_ClientReply{clientReply},
+	}
+
+	serializedMsg, err := proto.Marshal(raftMsg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	rs.net.send(addr, string(serializedMsg))
 }
 
 func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *RaftMessage) {

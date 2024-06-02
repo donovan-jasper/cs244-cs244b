@@ -1,8 +1,11 @@
 syntax = "proto3";
+package raftlog;
 option go_package = "./raftlog";
 
 message LogEntry {
     int32 term = 1;
     int32 index = 2;
     string command = 3;
+    string clientAddr = 4;
+    int32 clientPort = 5;
 }
