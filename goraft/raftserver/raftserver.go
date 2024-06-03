@@ -57,6 +57,7 @@ type RaftServer struct {
 
 	// TODO: Apply logs in background
 	logApplicationQueue chan raftlog.LogEntry
+	dnsModule           DNSModule
 }
 
 func setStateToCandidateCB(rs *RaftServer) {
@@ -403,7 +404,7 @@ func (rs *RaftServer) applyQueuedLogs() {
 	for {
 		log := <-rs.logApplicationQueue
 		fmt.Println("log to apply", log.Command)
-		//TODO: Call state machine apply function
+		rs.dnsModule.Apply(log.Command)
 
 		if rs.loadCurrentState() == Leader {
 			rs.replyToClient("TODO: real output", log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
