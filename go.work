@@ -1,0 +1,11 @@
+go 1.22.3
+
+use (
+	./go/src/dnsserver
+	./go/src/goraft
+	./go/src/goraft/raftserver
+	./go/src/goraft/raftserver/raftlog
+	./go/src/raftclient
+	./go/src/raftnetwork
+	./go/src/raftprotos
+)

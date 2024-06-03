@@ -1,6 +1,6 @@
-module raftlog
+module goraft/raftserver/raftlog
 
-go 1.22.2
+go 1.22.3
 
 require google.golang.org/protobuf v1.34.1
 

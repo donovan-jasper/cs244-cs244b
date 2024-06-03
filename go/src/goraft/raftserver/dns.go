@@ -5,7 +5,7 @@ import (
 	sync "sync"
 	"time"
 
-	pb "cs244_cs244b/raftprotos"
+	pb "raftprotos"
 
 	"google.golang.org/protobuf/proto"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
