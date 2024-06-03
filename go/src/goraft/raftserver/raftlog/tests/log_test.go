@@ -1,15 +1,16 @@
 package tests
 
 import (
-	"cs244_cs244b/raftprotos"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"raftlog"
+	"raftprotos"
 	"testing"
 	"time"
+
+	"goraft/raftserver/raftlog"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

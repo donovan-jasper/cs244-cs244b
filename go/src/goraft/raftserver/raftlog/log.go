@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	pb "cs244_cs244b/raftprotos"
+	pb "raftprotos"
 
 	"google.golang.org/protobuf/proto"
 )

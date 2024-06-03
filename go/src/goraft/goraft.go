@@ -1,13 +1,14 @@
 package main
 
 import (
-	"cs244_cs244b/goraft/raftserver"
-	"cs244_cs244b/raftnetwork"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"goraft/raftserver"
+	"raftnetwork"
 )
 
 func main() {

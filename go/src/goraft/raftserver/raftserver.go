@@ -9,10 +9,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"cs244_cs244b/goraft/raftserver/raftlog"
-	"cs244_cs244b/raftnetwork"
-	"cs244_cs244b/raftprotos"
-	pb "cs244_cs244b/raftprotos"
+	"goraft/raftserver/raftlog"
+	"raftnetwork"
+	"raftprotos"
+	pb "raftprotos"
 )
 
 type State int32

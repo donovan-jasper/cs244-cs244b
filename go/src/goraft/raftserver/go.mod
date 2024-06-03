@@ -1,4 +1,4 @@
-module raftserver
+module goraft/raftserver
 
 go 1.22.3
 
