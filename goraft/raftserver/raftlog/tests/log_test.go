@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"cs244_cs244b/raftprotos"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -15,7 +16,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func SameEntryDetails(a *raftlog.LogEntry, b *raftlog.LogEntry) bool {
+func SameEntryDetails(a *raftprotos.LogEntry, b *raftprotos.LogEntry) bool {
 	return a.Term == b.Term && a.Index == b.Index && a.Command == b.Command
 }
 
@@ -39,7 +40,7 @@ func TestAppendEntry(t *testing.T) {
 	rl := raftlog.NewRaftLog(filepath, false)
 
 	// Append an entry to the RaftLog
-	entry := &raftlog.LogEntry{
+	entry := &raftprotos.LogEntry{
 		Term:    1,
 		Index:   1,
 		Command: "test",
@@ -62,7 +63,7 @@ func TestAppendEntry(t *testing.T) {
 
 	defer file.Close()
 	var chunksize uint32
-	newEntry := &raftlog.LogEntry{}
+	newEntry := &raftprotos.LogEntry{}
 	binary.Read(file, binary.LittleEndian, &chunksize)
 	data := make([]byte, chunksize)
 	if _, err := io.ReadFull(file, data); err != nil {
@@ -89,7 +90,7 @@ func TestLoadLog(t *testing.T) {
 	rl := raftlog.NewRaftLog(filepath, false)
 
 	// Append an entry to the RaftLog
-	entry := &raftlog.LogEntry{
+	entry := &raftprotos.LogEntry{
 		Term:    1,
 		Index:   1,
 		Command: "test",
@@ -113,7 +114,7 @@ func TestBackupLog(t *testing.T) {
 	rl := raftlog.NewRaftLog(filepath, false)
 
 	// Append an entry to the RaftLog
-	entry := &raftlog.LogEntry{
+	entry := &raftprotos.LogEntry{
 		Term:    1,
 		Index:   1,
 		Command: "test",
@@ -138,7 +139,7 @@ func TestDeleteEntries(t *testing.T) {
 
 	for i := 1; i <= 5; i++ {
 		// Append an entry to the RaftLog
-		entry := &raftlog.LogEntry{
+		entry := &raftprotos.LogEntry{
 			Term:    1,
 			Index:   int32(i),
 			Command: fmt.Sprintf("test%v", i),
