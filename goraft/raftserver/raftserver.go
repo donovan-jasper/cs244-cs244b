@@ -228,7 +228,9 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *AppendEntriesRequest) {
 
 			if aeMsg.LeaderCommit > rs.commitIndex {
 				rs.commitIndex = min(aeMsg.LeaderCommit, rs.logEntries.GetSize()-1)
-				// TODO: Queue committed log entries for application
+				for i := rs.lastApplied + 1; i < int(rs.commitIndex); i++ {
+					rs.logApplicationQueue <- *rs.logEntries.GetEntry(int32(i))
+				}
 			}
 		}
 	}
@@ -361,7 +363,7 @@ func (rs *RaftServer) commitLogs() {
 
 			if float32(numAcks) >= (float32(len(rs.peers))+1.0)/2.0 {
 				rs.commitIndex = i
-				// TODO: Queue log to be applied
+				rs.logApplicationQueue <- *rs.logEntries.GetEntry(int32(idx))
 			} else {
 				break
 			}
@@ -404,10 +406,10 @@ func (rs *RaftServer) applyQueuedLogs() {
 	for {
 		log := <-rs.logApplicationQueue
 		fmt.Println("log to apply", log.Command)
-		rs.dnsModule.Apply(log.Command)
+		clientResponse := rs.dnsModule.Apply(log.Command)
 
 		if rs.loadCurrentState() == Leader {
-			rs.replyToClient("TODO: real output", log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
+			rs.replyToClient(string(clientResponse), log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
 		}
 	}
 }

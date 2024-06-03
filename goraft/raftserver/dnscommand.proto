@@ -21,3 +21,8 @@ message DNSRecord {
     google.protobuf.Duration ttl = 3;
     google.protobuf.Timestamp added = 4;
 }
+
+message DNSResponse {
+    bool success = 1;
+    optional DNSRecord dnsRecord = 2;
+}
