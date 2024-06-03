@@ -95,6 +95,8 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 
 	rs.net = raftnetwork.NewNetworkModule()
 
+	rs.dnsModule = *NewDNSModule()
+
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
 	rs.electionTimeoutTimer = NewTimer(randomDuration(ELECTION_TIMEOUT_MIN, ELECTION_TIMEOUT_MAX), rs, setStateToFollowerCB)
 
