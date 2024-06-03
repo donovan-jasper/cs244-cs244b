@@ -1,12 +1,14 @@
 package main
 
 import (
-	"cs244_cs244b/goraft/raftserver"
 	"fmt"
 	"os"
 	"path/filepath"
+	"raftnetwork"
 	"strconv"
 	"strings"
+
+	"goraft/raftserver"
 )
 
 func main() {
@@ -22,12 +24,12 @@ func main() {
 	}
 
 	peerAddressesStrs := os.Args[2:]
-	var peerAddresses []raftserver.Address
+	var peerAddresses []raftnetwork.Address
 
 	for _, str := range peerAddressesStrs {
 		parts := strings.Split(str, ":")
 		if len(parts) == 2 {
-			addr := raftserver.Address{
+			addr := raftnetwork.Address{
 				Ip:   parts[0],
 				Port: parts[1],
 			}

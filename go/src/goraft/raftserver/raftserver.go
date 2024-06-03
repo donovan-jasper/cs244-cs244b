@@ -9,10 +9,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"cs244_cs244b/goraft/raftserver/raftlog"
-	"cs244_cs244b/raftnetwork"
-	"cs244_cs244b/raftprotos"
-	pb "cs244_cs244b/raftprotos"
+	"goraft/raftserver/raftlog"
+	"raftnetwork"
+	"raftprotos"
+	pb "raftprotos"
 )
 
 type State int32
@@ -94,6 +94,8 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 	}
 
 	rs.net = raftnetwork.NewNetworkModule()
+
+	rs.dnsModule = *NewDNSModule()
 
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
 	rs.electionTimeoutTimer = NewTimer(randomDuration(ELECTION_TIMEOUT_MIN, ELECTION_TIMEOUT_MAX), rs, setStateToFollowerCB)

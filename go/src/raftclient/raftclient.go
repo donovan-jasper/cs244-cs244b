@@ -1,11 +1,11 @@
 package raftclient
 
 import (
-	"cs244_cs244b/raftnetwork"
 	"fmt"
 	"strconv"
 
-	pb "cs244_cs244b/raftprotos"
+	"raftnetwork"
+	pb "raftprotos"
 
 	"google.golang.org/protobuf/proto"
 )
