@@ -95,6 +95,7 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 
 	rs.net = raftnetwork.NewNetworkModule()
 
+	rs.logApplicationQueue = make(chan pb.LogEntry)
 	rs.dnsModule = *NewDNSModule()
 
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
@@ -105,6 +106,7 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 
 func (rs *RaftServer) Run() {
 	go rs.net.Listen(rs.peers[rs.id].Port)
+	go rs.applyQueuedLogs()
 
 	for {
 		rs.setLastState(rs.loadCurrentState())
@@ -361,7 +363,9 @@ func (rs *RaftServer) sendHeartbeats() {
 }
 
 func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
+	fmt.Println("Handling client request")
 	if rs.loadCurrentState() == Leader {
+		fmt.Println("We are leader, so add client command to log")
 		newLogEntry := &pb.LogEntry{}
 		newLogEntry.Term = int32(rs.currentTerm)
 		newLogEntry.Command = crMsg.Command
@@ -378,8 +382,8 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		rs.logEntries.AppendEntry(newLogEntry)
 
 		if len(rs.peers) == 1 {
-			fmt.Println("We are the only server, so queue entry to apply")
 			rs.logApplicationQueue <- *newLogEntry
+			fmt.Println("We are the only server, so queued entry to apply")
 		}
 
 		for followerId := 0; followerId < len(rs.peers); followerId++ {
@@ -388,6 +392,7 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 			}
 		}
 	} else {
+		fmt.Println("We are not leader, so redirect client command")
 		rs.replyToClient("", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
 	}
 
@@ -413,6 +418,7 @@ func (rs *RaftServer) commitLogs() {
 }
 
 func (rs *RaftServer) replicateLogs(leaderId, followerId int) {
+	fmt.Println("Replicating log to followers")
 	var entriesAlreadySent int32 = int32(rs.nextIndex[followerId])
 	var toReplicate []*pb.LogEntry
 
@@ -444,6 +450,7 @@ func (rs *RaftServer) replicateLogs(leaderId, followerId int) {
 
 func (rs *RaftServer) applyQueuedLogs() {
 	for {
+		fmt.Println("Waiting for log to apply")
 		log := <-rs.logApplicationQueue
 		fmt.Println("log to apply", log.Command)
 		clientResponse := rs.dnsModule.Apply(log.Command)
@@ -468,16 +475,13 @@ func (rs *RaftServer) evaluateElection() {
 }
 
 func (rs *RaftServer) replyToClient(output string, isLeader bool, addr string) {
+	fmt.Println("Replying to client")
 	clientReply := &pb.ClientReply{
 		Output:   output,
 		AmLeader: isLeader,
 		LeaderId: int32(rs.id),
 	}
-	raftMsg := &pb.RaftMessage{
-		Message: &pb.RaftMessage_ClientReply{clientReply},
-	}
-
-	serializedMsg, err := proto.Marshal(raftMsg)
+	serializedMsg, err := proto.Marshal(clientReply)
 	if err != nil {
 		fmt.Println(err)
 		return
