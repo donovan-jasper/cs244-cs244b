@@ -1,9 +1,10 @@
 syntax = "proto3";
 
-package raftserver;
+package raftprotos;
 
+option go_package = "./raftprotos";
 
-option go_package = "./raftserver";
+import "log_entry.proto";
 
 
 message RaftMessage {
@@ -72,12 +73,4 @@ message InstallSnapshotRequest {
 message InstallSnapshotResponse {
   int32 term = 1;
   bool success = 2;
-}
-
-message LogEntry {
-  int32 term = 1;
-  int32 index = 2;
-  string command = 3;
-  string clientAddr = 4;
-  int32 clientPort = 5;
 }

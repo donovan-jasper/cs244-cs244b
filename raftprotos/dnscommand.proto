@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package raftserver;
+package raftprotos;
 
-option go_package = "./raftserver";
+option go_package = "./raftprotos";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";

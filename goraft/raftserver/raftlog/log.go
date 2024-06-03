@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	pb "cs244_cs244b/raftprotos"
+
 	"google.golang.org/protobuf/proto"
 )
 
@@ -44,7 +46,7 @@ type WAL struct {
 	curIndex  int   // current byte index in the file
 }
 type RaftLog struct {
-	entries []*LogEntry
+	entries []*pb.LogEntry
 	wal     *WAL
 }
 
@@ -89,7 +91,7 @@ func NewWAL(filename string, loadBackup bool) *WAL {
 func NewRaftLog(filename string, loadBackup bool) *RaftLog {
 	wal := NewWAL(filename, loadBackup)
 	raftLog := &RaftLog{
-		entries: make([]*LogEntry, 0),
+		entries: make([]*pb.LogEntry, 0),
 		wal:     wal,
 	}
 	if loadBackup {
@@ -102,20 +104,20 @@ func NewRaftLog(filename string, loadBackup bool) *RaftLog {
 	return raftLog
 }
 
-func (r *RaftLog) AppendEntry(entry *LogEntry) {
+func (r *RaftLog) AppendEntry(entry *pb.LogEntry) {
 	r.entries = append(r.entries, entry)
 	r.wal.WriteEntry(entry)
 }
 
-func (r *RaftLog) GetEntry(index int32) *LogEntry {
+func (r *RaftLog) GetEntry(index int32) *pb.LogEntry {
 	return r.entries[index]
 }
 
-func (r *RaftLog) GetEntries() []*LogEntry {
+func (r *RaftLog) GetEntries() []*pb.LogEntry {
 	return r.entries
 }
 
-func (r *RaftLog) GetLastEntry() *LogEntry {
+func (r *RaftLog) GetLastEntry() *pb.LogEntry {
 	return r.entries[len(r.entries)-1]
 }
 
@@ -155,7 +157,7 @@ func (w *WAL) syncRoutine() {
 	}
 }
 
-func (w *WAL) WriteEntry(entry *LogEntry) error {
+func (w *WAL) WriteEntry(entry *pb.LogEntry) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	// marshal entry
@@ -208,9 +210,9 @@ func (w *WAL) TruncateAt(index int32) error {
 }
 
 // TOOD: should this be refactored to use it's own file?
-func (w *WAL) readAllEntries(file *os.File) ([]*LogEntry, error) {
+func (w *WAL) readAllEntries(file *os.File) ([]*pb.LogEntry, error) {
 	// read all entries from file
-	var entries []*LogEntry
+	var entries []*pb.LogEntry
 	for {
 		var chunksize int32
 		// break at end of file or some error
@@ -226,7 +228,7 @@ func (w *WAL) readAllEntries(file *os.File) ([]*LogEntry, error) {
 			return entries, err
 		}
 		// decode data
-		entry := &LogEntry{}
+		entry := &pb.LogEntry{}
 		if err := proto.Unmarshal(data, entry); err != nil {
 			log.Panic("failed to unmarshal entry", err)
 		}

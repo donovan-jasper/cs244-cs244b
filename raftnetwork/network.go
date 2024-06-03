@@ -1,4 +1,4 @@
-package raftserver
+package raftnetwork
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ type Address struct {
 }
 
 type NetworkModule struct {
-	msgQueue chan string
+	MsgQueue chan string
 }
 
 func NewNetworkModule() *NetworkModule {
 	return &NetworkModule{
-		msgQueue: make(chan string),
+		MsgQueue: make(chan string),
 	}
 }
 
@@ -30,10 +30,10 @@ func (n *NetworkModule) handleConnection(conn net.Conn) {
 		return
 	}
 
-	n.msgQueue <- string(buf[:msg])
+	n.MsgQueue <- string(buf[:msg])
 }
 
-func (n *NetworkModule) listen(port string) {
+func (n *NetworkModule) Listen(port string) {
 
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -55,7 +55,7 @@ func (n *NetworkModule) listen(port string) {
 	}
 }
 
-func (n *NetworkModule) send(serverAddr string, message string) {
+func (n *NetworkModule) Send(serverAddr string, message string) {
 	conn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		fmt.Println("Error connecting to server:", err.Error())

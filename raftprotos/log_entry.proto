@@ -1,6 +1,6 @@
 syntax = "proto3";
-package raftlog;
-option go_package = "./raftlog";
+package raftprotos;
+option go_package = "./raftprotos";
 
 message LogEntry {
     int32 term = 1;
