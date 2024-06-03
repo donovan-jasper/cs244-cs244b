@@ -367,7 +367,7 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		newLogEntry.Command = crMsg.Command
 
 		logIndex := 0
-		if rs.logEntries.GetSize() == 0 {
+		if rs.logEntries.GetSize() != 0 {
 			logIndex = int(rs.logEntries.GetLastEntry().Index) + 1
 		}
 		newLogEntry.Index = int32(logIndex)
@@ -378,11 +378,14 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		rs.logEntries.AppendEntry(newLogEntry)
 
 		if len(rs.peers) == 1 {
+			fmt.Println("We are the only server, so queue entry to apply")
 			rs.logApplicationQueue <- *newLogEntry
 		}
 
 		for followerId := 0; followerId < len(rs.peers); followerId++ {
-			rs.replicateLogs(rs.id, followerId)
+			if followerId != rs.id {
+				rs.replicateLogs(rs.id, followerId)
+			}
 		}
 	} else {
 		rs.replyToClient("", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
