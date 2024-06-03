@@ -55,17 +55,18 @@ func (n *NetworkModule) Listen(port string) {
 	}
 }
 
-func (n *NetworkModule) Send(serverAddr string, message string) {
+func (n *NetworkModule) Send(serverAddr string, message string) bool {
 	conn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		fmt.Println("Error connecting to server:", err.Error())
-		return
+		return false
 	}
 	defer conn.Close()
 
 	_, err = conn.Write([]byte(message))
 	if err != nil {
 		fmt.Println("Error writing to server:", err.Error())
-		return
+		return false
 	}
+	return true
 }

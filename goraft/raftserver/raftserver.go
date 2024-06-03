@@ -194,6 +194,8 @@ func (rs *RaftServer) handleMessage(msg string) {
 		rs.handleRequestVoteRequest(raftMsg.GetRequestVoteRequest())
 	case *pb.RaftMessage_RequestVoteResponse:
 		rs.handleRequestVoteResponse(raftMsg.GetRequestVoteResponse())
+	case *pb.RaftMessage_ClientRequest:
+		rs.handleClientRequest(raftMsg.GetClientRequest())
 	default:
 		fmt.Errorf("unknown message type")
 	}
@@ -356,6 +358,36 @@ func (rs *RaftServer) sendHeartbeats() {
 	}
 }
 
+func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
+	if rs.loadCurrentState() == Leader {
+		newLogEntry := &pb.LogEntry{}
+		newLogEntry.Term = int32(rs.currentTerm)
+		newLogEntry.Command = crMsg.Command
+
+		logIndex := 0
+		if rs.logEntries.GetSize() == 0 {
+			logIndex = int(rs.logEntries.GetLastEntry().Index) + 1
+		}
+		newLogEntry.Index = int32(logIndex)
+
+		newLogEntry.ClientAddr = crMsg.ReplyAddress
+		newLogEntry.ClientPort = crMsg.ReplyPort
+
+		rs.logEntries.AppendEntry(newLogEntry)
+
+		if len(rs.peers) == 1 {
+			rs.logApplicationQueue <- *newLogEntry
+		}
+
+		for followerId := 0; followerId < len(rs.peers); followerId++ {
+			rs.replicateLogs(rs.id, followerId)
+		}
+	} else {
+		rs.replyToClient("", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
+	}
+
+}
+
 func (rs *RaftServer) commitLogs() {
 	for i := rs.commitIndex + 1; i < rs.logEntries.GetSize(); i++ {
 		numAcks := 1
@@ -430,11 +462,11 @@ func (rs *RaftServer) evaluateElection() {
 	}
 }
 
-func (rs *RaftServer) replyToClient(output string, addr string) {
+func (rs *RaftServer) replyToClient(output string, isLeader bool, addr string) {
 	clientReply := &pb.ClientReply{
-		Output:     output,
-		LeaderAddr: rs.peers[rs.id].Ip + ":" + rs.peers[rs.id].Port,
-		LeaderId:   int32(rs.id),
+		Output:   output,
+		AmLeader: isLeader,
+		LeaderId: int32(rs.id),
 	}
 	raftMsg := &pb.RaftMessage{
 		Message: &pb.RaftMessage_ClientReply{clientReply},

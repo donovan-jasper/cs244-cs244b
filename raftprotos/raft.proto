@@ -51,15 +51,17 @@ message RequestVoteResponse {
 }
 
 message ClientRequest {
-  string command = 1;
-  string replyAddress = 2;
-  int32 replyPort = 3;
+  int32 commandID = 1;
+  string command = 2;
+  string replyAddress = 3;
+  int32 replyPort = 4;
 }
 
 message ClientReply {
-  string output = 1;
-  string leaderAddr = 2;
-  int32 leaderId = 3;
+  int32 commandID = 1;
+  string output = 2;
+  bool amLeader = 3;
+  int32 leaderId = 4;
 }
 
 message InstallSnapshotRequest {
