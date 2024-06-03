@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"raftnetwork"
 	"strconv"
 	"strings"
 
 	"goraft/raftserver"
+	"raftnetwork"
 )
 
 func main() {
