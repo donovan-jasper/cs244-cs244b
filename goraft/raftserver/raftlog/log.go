@@ -84,7 +84,7 @@ func NewWAL(filename string, loadBackup bool) *WAL {
 		metadata:  make([]int, 0),
 		curIndex:  0,
 	}
-	go wal.syncRoutine()
+	//go wal.syncRoutine()
 	return wal
 }
 
@@ -106,7 +106,7 @@ func NewRaftLog(filename string, loadBackup bool) *RaftLog {
 
 func (r *RaftLog) AppendEntry(entry *pb.LogEntry) {
 	r.entries = append(r.entries, entry)
-	//r.wal.WriteEntry(entry)
+	r.wal.WriteEntry(entry)
 }
 
 func (r *RaftLog) GetEntry(index int32) *pb.LogEntry {

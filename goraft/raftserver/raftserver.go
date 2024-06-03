@@ -232,6 +232,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 				rs.logEntries.DeleteEntries(aeMsg.PrevLogIndex + 1)
 			}
 			for i := 0; i < len(aeMsg.Entries); i++ {
+				fmt.Println("Appending new entry from AE RPC")
 				rs.logEntries.AppendEntry(aeMsg.Entries[i])
 			}
 
@@ -262,8 +263,8 @@ func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesRespon
 	fmt.Println("Handling append entries response with term", aerMsg.GetTerm())
 	if int(aerMsg.GetTerm()) == rs.currentTerm && rs.loadCurrentState() == Leader {
 		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
-			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
-			rs.ackedIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx()) - 1
+			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx()) + 1
+			rs.ackedIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
 			rs.commitLogs()
 		} else if rs.nextIndex[int(aerMsg.GetFollowerId())] > 0 {
 			rs.nextIndex[int(aerMsg.GetFollowerId())]--
@@ -399,19 +400,19 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 }
 
 func (rs *RaftServer) commitLogs() {
+	fmt.Println("Committing new logs")
 	for i := rs.commitIndex + 1; i < rs.logEntries.GetSize(); i++ {
 		numAcks := 1
 		for _, idx := range rs.ackedIndex {
 			if int32(idx) >= i {
 				numAcks++
 			}
-
-			if float32(numAcks) >= (float32(len(rs.peers))+1.0)/2.0 {
-				rs.commitIndex = i
-				rs.logApplicationQueue <- *rs.logEntries.GetEntry(int32(idx))
-			} else {
-				break
-			}
+		}
+		if float32(numAcks) >= (float32(len(rs.peers))+1.0)/2.0 {
+			rs.commitIndex = i
+			rs.logApplicationQueue <- *rs.logEntries.GetEntry(int32(i))
+		} else {
+			break
 		}
 	}
 	// TODO: Save to permanent storage
