@@ -446,7 +446,7 @@ func (rs *RaftServer) applyQueuedLogs() {
 		clientResponse := rs.dnsModule.Apply(log.Command)
 
 		if rs.loadCurrentState() == Leader {
-			rs.replyToClient(string(clientResponse), log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
+			rs.replyToClient(string(clientResponse), true, log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
 		}
 	}
 }
