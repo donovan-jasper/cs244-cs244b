@@ -20,10 +20,31 @@ def main(filename, timeout, num_servers, verbose):
     server_list = " ".join(servers[:num_servers])
     logging.info("server_list: %s", server_list)
     # run the leader test
+    processes = []
     for idx, server_port in enumerate(servers):
         server = server_port.split(":")[0]
         logging.info("running leader test on %s", server)
-        util.run_server(server, idx, server_list)
+        processes.append(util.run_server(server, idx, server_list))
+
+    found_leader = False
+    leader_idx = None
+    while True:
+        for idx, process in enumerate(processes):
+            # print(process)
+            if process.poll() is not None:
+                logging.error("server %d died", idx)
+                return
+            for line in open('debug/%d' % idx):
+                if util.leader_string in line:
+                    logging.info("server %d is leader", idx)
+                    found_leader = True
+                    leader_idx = idx
+                    break
+        if found_leader:
+            break
+    # TODO: once you figure out which one is leader, kill it
+    processes[leader_idx].kill()
+
 
 if __name__ == "__main__":
     argparse = ArgumentParser()
