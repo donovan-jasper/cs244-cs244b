@@ -14,15 +14,19 @@ def plot_cdf(file_name, label=None, color='blue', linestyle='-'):
 
     plt.plot(sorted_data, cdf, label=label, color=color, linestyle=linestyle)
 
-file_names = ["file1.txt", "file2.txt", "file3.txt", "file4.txt", "file5.txt"]
-colors = ['orange', 'purple', 'red', 'green', 'red']
-linestyles = ['--', '--', '--', '--', '-']
+file_names = ["file1.txt", "file2.txt", "file3.txt", "file4.txt", "file5.txt", "file6.txt"]
+colors = ['orange', 'purple', 'red', 'green', 'red', 'blue']
+linestyles = [
+    (0, (1, 1)),          # Orange dotted
+    (0, (3, 1, 1, 1)),     # Purple denselydashdotted
+    (0, (1, 1, 1, 3)),         # Red loosely two dotted
+    (0, (1, 3)),         # Green loosely dotted
+    '-',                  # Red solid line
+    '--'                  # Blue dashed
+]
 
 for i, (file_name, color, linestyle) in enumerate(zip(file_names, colors, linestyles)):
-    if i < 4:
-        plot_cdf(file_name, label=f"File {i+1}", color=color, linestyle=linestyle)
-    else:
-        plot_cdf(file_name, label=f"File {i+1}", color=color)
+    plot_cdf(file_name, label=f"File {i+1}", color=color, linestyle=linestyle)
 
 plt.xlabel("Duration")
 plt.ylabel("CDF")
