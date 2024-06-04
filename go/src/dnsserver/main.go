@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -9,6 +10,7 @@ import (
 	pb "raftprotos"
 
 	"github.com/miekg/dns"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -100,6 +102,17 @@ func parseQuery(m *dns.Msg) {
 				log.Printf("error querying Cloudflare: %v\n", err)
 				return
 			}
+
+			// add the response back to the Raft cluster
+			for _, answer := range in.Answer {
+				if a, ok := answer.(*dns.A); ok {
+					err = addRecordToRaftCluster(*a)
+					if err != nil {
+						log.Printf("error adding record to Raft cluster: %v\n", err)
+					}
+				}
+			}
+
 			m.Answer = append(m.Answer, in.Answer...)
 		}
 	}
@@ -124,6 +137,21 @@ func readRecordFromRaftCluster(hostname string) (dns.A, bool) {
 	} else {
 		return dns.A{}, false
 	}
+}
+
+func addRecordToRaftCluster(record dns.A) error {
+	raftResponse := raftClient.SendDNSCommand(pb.DNSCommand{
+		CommandType: AddRecord,
+		Domain:      record.Hdr.Name,
+		Ip:          record.A.String(),
+		Ttl:         durationpb.New(time.Duration(record.Hdr.Ttl) * time.Second),
+	})
+
+	if !raftResponse.Success {
+		return fmt.Errorf("failed to add record to Raft cluster: %s", record.Hdr.Name)
+	}
+
+	return nil
 }
 
 func main() {
