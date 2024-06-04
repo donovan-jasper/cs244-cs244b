@@ -1,10 +1,10 @@
 package main
 
 import (
-	pb "cs244_cs244b/raftprotos"
 	"fmt"
 	"os"
 	"raftclient"
+	pb "raftprotos"
 	"strconv"
 	"time"
 
