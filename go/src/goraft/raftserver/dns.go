@@ -61,6 +61,7 @@ func (dm *DNSModule) Apply(command string) []byte {
 		delete(dm.dnsRecords, dnsCommand.Domain)
 		dnsResponse.Success = true
 	case ReadRecord:
+		fmt.Println("Reading")
 		record, ok := dm.dnsRecords[dnsCommand.Domain]
 		// If the key exists
 		if ok {

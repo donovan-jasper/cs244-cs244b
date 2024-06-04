@@ -30,9 +30,9 @@ func main() {
 	rc := raftclient.NewRaftClient(peerAddresses, my_addr, my_port)
 
 	dnsCommand := pb.DNSCommand{
-		CommandType: 0, //Add record
-		Domain:      "example.com",
-		Hostname:    "example.com",
+		CommandType: 2, //Add record
+		Domain:      "yeah.com",
+		Hostname:    "yeah.com",
 		Ip:          "127.0.0.1",
 		Ttl:         durationpb.New(time.Duration(60 * 1e9)),
 	}

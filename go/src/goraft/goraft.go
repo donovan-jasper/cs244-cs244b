@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -46,6 +45,6 @@ func main() {
 
 	backupDir := "./backups"
 
-	rs := raftserver.NewRaftServer(server_id, peerAddresses, filepath.Join(backupDir, strconv.Itoa(server_id)), shouldRestore)
+	rs := raftserver.NewRaftServer(server_id, peerAddresses, backupDir, shouldRestore)
 	rs.Run()
 }

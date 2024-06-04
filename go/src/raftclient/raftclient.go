@@ -79,6 +79,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 			}
 			rc.currentLeaderID = int(clientReply.LeaderId)
 			if !clientReply.AmLeader {
+
 				if clientReply.CommandID == currentCommandID {
 					rc.sendToRaftLeader(string(serializedRequest))
 					time.Sleep(1 * time.Second)

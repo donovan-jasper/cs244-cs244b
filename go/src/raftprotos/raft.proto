@@ -59,7 +59,7 @@ message ClientRequest {
 
 message ClientReply {
   int32 commandID = 1;
-  string output = 2;
+  bytes output = 2;
   bool amLeader = 3;
   int32 leaderId = 4;
 }

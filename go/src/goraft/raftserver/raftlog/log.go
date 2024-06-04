@@ -71,7 +71,7 @@ func NewWAL(filename string, loadBackup bool) *WAL {
 		fileFlags = loadWithBackup
 	}
 
-	file, err := os.OpenFile(filename, fileFlags, 0644)
+	file, err := os.OpenFile(filename, fileFlags, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -169,6 +169,10 @@ func (w *WAL) WriteEntry(entry *pb.LogEntry) error {
 	if err := binary.Write(w.bufWriter, binary.LittleEndian, int32(len(data))); err != nil {
 		return err
 	}
+	return w.WriteData(data)
+}
+
+func (w *WAL) WriteData(data []byte) error {
 	// write data
 	byteSize, err := w.bufWriter.Write(data)
 	if err != nil {
@@ -207,6 +211,32 @@ func (w *WAL) TruncateAt(index int32) error {
 	w.metadata = w.metadata[:index]
 	w.curIndex = start
 	return nil
+}
+
+func (w *WAL) ClearState() error {
+	// delete entry from WAL
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// delete all bytes from the file after start
+	if err := os.Truncate(w.filename, 0); err != nil {
+		log.Printf("Failed to truncate: %v", err)
+	}
+	_, err := w.file.Seek(0, io.SeekEnd)
+	if err != nil {
+		log.Printf("Failed to seek to end of file: %v\n", err)
+		return err
+	}
+
+	// Reset the buffered writer with the new file position
+	w.bufWriter.Reset(w.file)
+
+	return nil
+}
+
+func (w *WAL) ReadState() (string, error) {
+	variables, err := os.ReadFile(w.filename)
+	return string(variables), err
 }
 
 // TOOD: should this be refactored to use it's own file?

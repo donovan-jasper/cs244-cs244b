@@ -3,7 +3,9 @@ package raftserver
 import (
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -35,11 +37,10 @@ type RaftServer struct {
 	peers []raftnetwork.Address
 
 	// Persistent state
-	currentTerm int
-	votedFor    int
-	logEntries  *raftlog.RaftLog
-
-	// TODO: Add persistant storage mechanism
+	currentTerm         int
+	votedFor            int
+	logEntries          *raftlog.RaftLog
+	persistantVariables *raftlog.WAL
 
 	currentState int32
 	lastState    int32
@@ -78,8 +79,6 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 	rs.currentTerm = 0
 	rs.votedFor = -1
 
-	rs.logEntries = raftlog.NewRaftLog(backupFilepath, restoreFromDisk)
-
 	rs.setCurrentState(Follower)
 	rs.setLastState(Follower)
 	rs.commitIndex = -1
@@ -91,6 +90,13 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 	rs.ackedIndex = make([]int, len(peers))
 	for i := range rs.ackedIndex {
 		rs.ackedIndex[i] = -1
+	}
+
+	rs.persistantVariables = raftlog.NewWAL(filepath.Join(backupFilepath, strconv.Itoa(id)+"-state"), restoreFromDisk)
+	rs.logEntries = raftlog.NewRaftLog(filepath.Join(backupFilepath, strconv.Itoa(id)), restoreFromDisk)
+
+	if restoreFromDisk {
+		rs.loadPersistentVariables()
 	}
 
 	rs.net = raftnetwork.NewNetworkModule()
@@ -175,7 +181,7 @@ func (rs *RaftServer) doElection() {
 			raftMsg := &pb.RaftMessage{
 				Message: &pb.RaftMessage_RequestVoteRequest{reqVoteReq},
 			}
-
+			rs.savePersistentVariables()
 			rs.sendRaftMsg(i, raftMsg)
 		}
 	}
@@ -255,7 +261,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 	raftMsg := &pb.RaftMessage{
 		Message: &pb.RaftMessage_AppendEntriesResponse{appEntriesResp},
 	}
-
+	rs.savePersistentVariables()
 	rs.sendRaftMsg(int(aeMsg.GetLeaderId()), raftMsg)
 }
 
@@ -313,7 +319,7 @@ func (rs *RaftServer) handleRequestVoteRequest(rvMsg *pb.RequestVoteRequest) {
 	raftMsg := &pb.RaftMessage{
 		Message: &pb.RaftMessage_RequestVoteResponse{requestVoteReplyMsg},
 	}
-
+	rs.savePersistentVariables()
 	rs.sendRaftMsg(int(rvMsg.GetCandidateId()), raftMsg)
 
 }
@@ -353,9 +359,8 @@ func (rs *RaftServer) sendHeartbeats() {
 				raftMsg := &pb.RaftMessage{
 					Message: &pb.RaftMessage_AppendEntriesRequest{appEntriesReq},
 				}
-
+				rs.savePersistentVariables()
 				rs.sendRaftMsg(i, raftMsg)
-				fmt.Println("Send to", i, "completed")
 			}
 		}
 
@@ -394,7 +399,7 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		}
 	} else {
 		fmt.Println("We are not leader, so redirect client command")
-		rs.replyToClient("Not the leader", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
+		rs.replyToClient([]byte("Not the leader"), false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
 	}
 
 }
@@ -415,7 +420,7 @@ func (rs *RaftServer) commitLogs() {
 			break
 		}
 	}
-	// TODO: Save to permanent storage
+	rs.savePersistentVariables()
 }
 
 func (rs *RaftServer) replicateLogs(leaderId, followerId int) {
@@ -457,7 +462,7 @@ func (rs *RaftServer) applyQueuedLogs() {
 		clientResponse := rs.dnsModule.Apply(log.Command)
 
 		if rs.loadCurrentState() == Leader {
-			rs.replyToClient(string(clientResponse), true, log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
+			rs.replyToClient(clientResponse, true, log.ClientAddr+":"+strconv.Itoa(int(log.ClientPort)))
 		}
 	}
 }
@@ -475,18 +480,19 @@ func (rs *RaftServer) evaluateElection() {
 	}
 }
 
-func (rs *RaftServer) replyToClient(output string, isLeader bool, addr string) {
+func (rs *RaftServer) replyToClient(output []byte, isLeader bool, addr string) {
 	fmt.Println("Replying to client")
 	clientReply := &pb.ClientReply{
 		Output:   output,
 		AmLeader: isLeader,
-		LeaderId: int32(rs.id),
+		LeaderId: int32(rs.currentLeader),
 	}
 	serializedMsg, err := proto.Marshal(clientReply)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	rs.savePersistentVariables()
 	rs.net.Send(addr, string(serializedMsg))
 }
 
@@ -499,6 +505,34 @@ func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *pb.RaftMessage) {
 
 	addr := rs.peers[targetId]
 	rs.net.Send(addr.Ip+":"+addr.Port, string(serializedMsg))
+}
+
+func (rs *RaftServer) loadPersistentVariables() {
+	variables, _ := rs.persistantVariables.ReadState()
+	splitVars := strings.Split(variables, "\n")
+	if len(splitVars) != 2 {
+		fmt.Println("Error: Failed to load variables from file")
+	}
+
+	currTerm, err := strconv.Atoi(splitVars[0])
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	rs.currentTerm = currTerm
+
+	votedFor, err := strconv.Atoi(splitVars[1])
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	rs.votedFor = votedFor
+}
+
+func (rs *RaftServer) savePersistentVariables() {
+	variables := strconv.Itoa(rs.currentTerm) + "\n" + strconv.Itoa(rs.votedFor)
+	rs.persistantVariables.ClearState()
+	rs.persistantVariables.WriteData([]byte(variables))
 }
 
 func (rs *RaftServer) loadCurrentState() State {
