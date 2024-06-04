@@ -61,9 +61,15 @@ func (dm *DNSModule) Apply(command string) []byte {
 		delete(dm.dnsRecords, dnsCommand.Domain)
 		dnsResponse.Success = true
 	case ReadRecord:
-		record := dm.dnsRecords[dnsCommand.Domain]
-		dnsResponse.DnsRecord = &record
-		dnsResponse.Success = true
+		record, ok := dm.dnsRecords[dnsCommand.Domain]
+		// If the key exists
+		if ok {
+			dnsResponse.DnsRecord = &record
+			dnsResponse.Success = true
+		} else {
+			dnsResponse.Success = false
+		}
+
 	}
 
 	return serializeDNSResponse(dnsResponse)
