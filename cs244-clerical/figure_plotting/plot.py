@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 
 def generate_cdf(data):
     sorted_data = np.sort(data)
@@ -28,11 +29,13 @@ linestyles = [
 for i, (file_name, color, linestyle) in enumerate(zip(file_names, colors, linestyles)):
     plot_cdf(file_name, label=f"File {i+1}", color=color, linestyle=linestyle)
 
-plt.xlabel("Duration")
-plt.ylabel("CDF")
+plt.xlabel("time without leader (ms)")
+plt.ylabel("cumulative percent")
+axes = plt.gca()
+axes.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+plt.xscale('log')
 plt.legend()
 
 # Show plot
 plt.grid(True)
 plt.show()
-
