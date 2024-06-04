@@ -3,6 +3,7 @@ package raftclient
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"raftnetwork"
 	pb "raftprotos"
@@ -80,6 +81,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 			if !clientReply.AmLeader {
 				if clientReply.CommandID == currentCommandID {
 					rc.sendToRaftLeader(string(serializedRequest))
+					time.Sleep(1 * time.Second)
 				}
 				continue
 			}

@@ -394,7 +394,7 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		}
 	} else {
 		fmt.Println("We are not leader, so redirect client command")
-		rs.replyToClient("", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
+		rs.replyToClient("Not the leader", false, crMsg.ReplyAddress+":"+strconv.Itoa(int(crMsg.ReplyPort)))
 	}
 
 }
