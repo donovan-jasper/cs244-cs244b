@@ -12,18 +12,23 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: go run . <server_id> <server0_address:port> <server1_address:port> ... <serverN_address:port>")
+	if len(os.Args) < 4 {
+		fmt.Println("Usage: go run . <should_restore> <server_id> <server0_address:port> <server1_address:port> ... <serverN_address:port>")
 		return
 	}
 
-	server_id, err := strconv.Atoi(os.Args[1])
+	shouldRestore, err := strconv.ParseBool(os.Args[1])
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	server_id, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	peerAddressesStrs := os.Args[2:]
+	peerAddressesStrs := os.Args[3:]
 	var peerAddresses []raftnetwork.Address
 
 	for _, str := range peerAddressesStrs {
@@ -41,8 +46,6 @@ func main() {
 
 	backupDir := "./backups"
 
-	// TODO: Take in shouldRestore from command line
-	shouldRestore := false
 	rs := raftserver.NewRaftServer(server_id, peerAddresses, filepath.Join(backupDir, strconv.Itoa(server_id)), shouldRestore)
 	rs.Run()
 }
