@@ -2,7 +2,9 @@ package raftserver
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -92,6 +94,11 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 		rs.ackedIndex[i] = -1
 	}
 
+	// Create backup directory if it doesn't exist
+	if _, err := os.Stat(backupFilepath); os.IsNotExist(err) {
+		_ = os.Mkdir(backupFilepath, os.ModePerm)
+		// choosing to ignore err
+	}
 	rs.persistantVariables = raftlog.NewWAL(filepath.Join(backupFilepath, strconv.Itoa(id)+"-state"), restoreFromDisk)
 	rs.logEntries = raftlog.NewRaftLog(filepath.Join(backupFilepath, strconv.Itoa(id)), restoreFromDisk)
 
@@ -241,6 +248,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 				fmt.Println("Appending new entry from AE RPC")
 				rs.logEntries.AppendEntry(aeMsg.Entries[i])
 			}
+			log.Println("total entries:", rs.logEntries.GetSize())
 
 			if aeMsg.LeaderCommit > rs.commitIndex {
 				rs.commitIndex = min(aeMsg.LeaderCommit, rs.logEntries.GetSize()-1)
@@ -341,6 +349,7 @@ func (rs *RaftServer) sendHeartbeats() {
 		for i := range len(rs.peers) {
 			if i != rs.id {
 				fmt.Println("Sending heartbeat to", i)
+				log.Println("total entries:", rs.logEntries.GetSize())
 				var prevLogIndex int32 = -1
 				var prevLogTerm int32 = 0
 				if rs.logEntries.GetSize() != 0 {
@@ -386,7 +395,7 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		newLogEntry.ClientPort = crMsg.ReplyPort
 
 		rs.logEntries.AppendEntry(newLogEntry)
-
+		log.Println("total entries:", rs.logEntries.GetSize())
 		if len(rs.peers) == 1 {
 			rs.logApplicationQueue <- *newLogEntry
 			fmt.Println("We are the only server, so queued entry to apply")

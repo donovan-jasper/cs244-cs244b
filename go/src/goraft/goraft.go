@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	backupDir := "./backups"
-
+	log.Println("should Restore:", shouldRestore)
 	rs := raftserver.NewRaftServer(server_id, peerAddresses, backupDir, shouldRestore)
 	rs.Run()
 }

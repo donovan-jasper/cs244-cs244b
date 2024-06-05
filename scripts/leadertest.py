@@ -34,7 +34,7 @@ def main(filename, timeout, num_servers, verbose):
             if process.poll() is not None:
                 logging.error("server %d died", idx)
                 return
-            for line in open('debug/%d' % idx):
+            for line in open('debug/%d.log' % idx):
                 if util.leader_string in line:
                     logging.info("server %d is leader", idx)
                     found_leader = True
