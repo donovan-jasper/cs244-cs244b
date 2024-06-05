@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
+	"os"
 	"time"
 
 	"raftclient"
@@ -52,11 +53,7 @@ var localRecords = map[string]LocalDNSARecord{
 	},
 }
 
-var raftClient = raftclient.NewRaftClient(
-	[]string{"localhost:8080", "localhost:8081", "localhost:8082"},
-	"localhost",
-	8083,
-)
+var raftClient raftclient.RaftClient
 
 // DNS handler function
 func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
@@ -99,7 +96,7 @@ func parseQuery(m *dns.Msg) {
 
 			in, _, err := c.Exchange(recursiveMsg, "1.1.1.1:53") // query Cloudflare DNS
 			if err != nil {
-				log.Printf("error querying Cloudflare: %v\n", err)
+				slog.Error("error querying Cloudflare: %v\n", "error", err)
 				return
 			}
 
@@ -108,7 +105,7 @@ func parseQuery(m *dns.Msg) {
 				if a, ok := answer.(*dns.A); ok {
 					err = addRecordToRaftCluster(*a)
 					if err != nil {
-						log.Printf("error adding record to Raft cluster: %v\n", err)
+						slog.Error("error adding record to Raft cluster: %v\n", "error", err)
 					}
 				}
 			}
@@ -121,7 +118,7 @@ func parseQuery(m *dns.Msg) {
 func readRecordFromRaftCluster(hostname string) (dns.A, bool) {
 	raftResponse := raftClient.SendDNSCommand(pb.DNSCommand{
 		CommandType: ReadRecord,
-		Domain:      hostname,
+		Domain:      "saligrama.io",
 	})
 
 	if raftResponse.Success {
@@ -155,14 +152,21 @@ func addRecordToRaftCluster(record dns.A) error {
 }
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+	}))
+	slog.SetDefault(logger)
+
 	// Setup DNS server
 	dns.HandleFunc(".", handleDNSRequest)
-	server := &dns.Server{Addr: ":53", Net: "udp"}
-	log.Printf("Starting DNS server on port%s\n", server.Addr)
+	server := &dns.Server{Addr: ":15353", Net: "udp"}
+	slog.Info("Starting DNS server on port%s\n", "addr", server.Addr)
+
+	raftClient = *raftclient.NewRaftClient(os.Args[1:], "127.0.0.1", 16353)
 
 	// Start server
 	err := server.ListenAndServe()
 	if err != nil {
-		log.Fatalf("Failed to start server: %s\n", err.Error())
+		slog.Error("Failed to start server", "error", err.Error())
 	}
 }

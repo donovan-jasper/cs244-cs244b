@@ -2,6 +2,7 @@ package raftclient
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -46,7 +47,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 
 	serializedCommand, err := proto.Marshal(&dnsCommand)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("failed to marshal command", "error", err)
 	}
 
 	currentCommandID := rc.commandID
@@ -75,7 +76,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 		if ok {
 			var clientReply pb.ClientReply
 			if err := proto.Unmarshal([]byte(msg), &clientReply); err != nil {
-				fmt.Errorf("failed to unmarshal message: %w", err)
+				slog.Error("failed to unmarshal message: %w", "error", err)
 			}
 			rc.currentLeaderID = int(clientReply.LeaderId)
 			if !clientReply.AmLeader {
@@ -88,11 +89,11 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 			}
 			var dnsResponse pb.DNSResponse
 			if err := proto.Unmarshal([]byte(clientReply.Output), &dnsResponse); err != nil {
-				fmt.Errorf("failed to unmarshal message: %w", err)
+				slog.Error("failed to unmarshal message: %w", "error", err)
 			}
 			rc.responses[clientReply.CommandID] = &dnsResponse
 		} else {
-			fmt.Println("Channel closed!")
+			slog.Info("Channel closed!")
 		}
 	}
 
