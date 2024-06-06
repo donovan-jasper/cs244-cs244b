@@ -2,6 +2,7 @@ package raftnetwork
 
 import (
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -38,6 +39,8 @@ func (n *NetworkModule) Listen(port string) {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
+		// prob fix later, keeping above sdout print for now
+		log.Fatalf("Error listening: %v", err)
 		return
 	}
 	defer ln.Close()

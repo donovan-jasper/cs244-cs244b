@@ -5,12 +5,22 @@ import util
 from argparse import ArgumentParser
 
 
-def main(filename: str, timeout: int, num_servers: int, verbose: bool):
+def main(
+    filename: str,
+    timeout: int,
+    num_servers: int,
+    verbose: bool,
+    restore=False,
+    interval: int = 10,
+):
     print(
         f"filename={filename}, timeout={timeout}, num_servers={num_servers}, verbose={verbose}"
     )
-    util.sh("rm -f debug/*")
-    util.sh("mkdir -p debug")
+    if not restore:
+        util.sh("rm -f debug/*", shell=True)
+        util.sh("mkdir -p debug", shell=True)
+    util.sh("go build ../go/src/goraft/goraft.go", shell=True)
+
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     # read file, assume it is in format of "server:port"
@@ -33,10 +43,11 @@ def main(filename: str, timeout: int, num_servers: int, verbose: bool):
         server = server_port.split(":")[0]
         logging.info("running leader test on %s", server)
         processes.append(util.run_server(server, idx, server_list))
-        # time.sleep(0.1)
 
     found_leader = False
     leader_idx = None
+    current_term = 0
+    leader_term = 0
     while True:
         for idx, process in enumerate(processes):
             # print(process)
@@ -53,9 +64,17 @@ def main(filename: str, timeout: int, num_servers: int, verbose: bool):
             break
     # TODO: once you figure out which one is leader, kill it
     processes[leader_idx].kill()
+    processes[leader_idx].wait()
+    start_time = time.time()
     logging.info("killed leader %d ?", leader_idx)
-    for process in processes:
-        process.kill()
+    for i in range(len(processes)):
+        if i == leader_idx:
+            continue
+        processes[i].terminate()
+        processes[i].wait()
+        print("killed server", i)
+    print("killed all servers except leader")
+    print(processes[leader_idx])
 
 
 if __name__ == "__main__":
@@ -71,6 +90,15 @@ if __name__ == "__main__":
         help="timeout hige range (ms). NOT IMPLEMENTED",
         type=int,
         default=150,
+    )
+    argparse.add_argument(
+        "--restore", help="Restore from previous state", action="store_true"
+    )
+    argparse.add_argument(
+        "--interval",
+        help="Interval between heartbeats (ms). NOT IMPLEMENTED",
+        type=int,
+        default=10,
     )
     argparse.add_argument(
         "--verbose", help="Enable verbose output", action="store_true"
