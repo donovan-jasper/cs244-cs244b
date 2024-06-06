@@ -1,6 +1,7 @@
 # folder paths
 backups/
 __pycache__/
+debug/
 
 # files
 .log

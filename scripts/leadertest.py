@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 import logging
+import time
 import util
 from argparse import ArgumentParser
 
-def main(filename, timeout, num_servers, verbose):
-    print(f"filename={filename}, timeout={timeout}, num_servers={num_servers}, verbose={verbose}")
-    util.sh('rm -f debug/*')
-    util.sh('mkdir -p debug')
+
+def main(filename: str, timeout: int, num_servers: int, verbose: bool):
+    print(
+        f"filename={filename}, timeout={timeout}, num_servers={num_servers}, verbose={verbose}"
+    )
+    util.sh("rm -f debug/*")
+    util.sh("mkdir -p debug")
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     # read file, assume it is in format of "server:port"
@@ -14,7 +18,11 @@ def main(filename, timeout, num_servers, verbose):
         servers = f.read().splitlines()
     logging.info("servers: %s", servers)
     if len(servers) < num_servers:
-        logging.error("not enough servers, need at least %d, only had %d", num_servers, len(servers))
+        logging.error(
+            "not enough servers, need at least %d, only had %d",
+            num_servers,
+            len(servers),
+        )
         return
 
     server_list = " ".join(servers[:num_servers])
@@ -25,6 +33,7 @@ def main(filename, timeout, num_servers, verbose):
         server = server_port.split(":")[0]
         logging.info("running leader test on %s", server)
         processes.append(util.run_server(server, idx, server_list))
+        # time.sleep(0.1)
 
     found_leader = False
     leader_idx = None
@@ -34,7 +43,7 @@ def main(filename, timeout, num_servers, verbose):
             if process.poll() is not None:
                 logging.error("server %d died", idx)
                 return
-            for line in open('debug/%d.log' % idx):
+            for line in open("debug/%d.log" % idx):
                 if util.leader_string in line:
                     logging.info("server %d is leader", idx)
                     found_leader = True
@@ -44,13 +53,27 @@ def main(filename, timeout, num_servers, verbose):
             break
     # TODO: once you figure out which one is leader, kill it
     processes[leader_idx].kill()
+    logging.info("killed leader %d ?", leader_idx)
+    for process in processes:
+        process.kill()
 
 
 if __name__ == "__main__":
     argparse = ArgumentParser()
-    argparse.add_argument("filename", help="The name of the file to read")
-    argparse.add_argument("--num_servers", help="Number servers", type=int, default=5)
-    argparse.add_argument("--timeout", help="The timeout value", type=int, default=10)
-    argparse.add_argument("--verbose", help="Enable verbose output", action="store_true")
+    argparse.add_argument(
+        "filename", help="The name of the file to read for cluster servers"
+    )
+    argparse.add_argument(
+        "--num_servers", help="Number of servers to use", type=int, default=5
+    )
+    argparse.add_argument(
+        "--timeout",
+        help="timeout hige range (ms). NOT IMPLEMENTED",
+        type=int,
+        default=150,
+    )
+    argparse.add_argument(
+        "--verbose", help="Enable verbose output", action="store_true"
+    )
     args = argparse.parse_args()
     main(**vars(args))
