@@ -6,6 +6,7 @@ command_prefix = "go run ../go/src/goraft/goraft.go"
 command_prefix = "./goraft"
 # leader_string = "We are leader, so add client command to log"
 leader_string = "Election won"
+leader_string = "leader is"
 
 
 def sh(command: str, bg=False, shell=False, **kwargs):

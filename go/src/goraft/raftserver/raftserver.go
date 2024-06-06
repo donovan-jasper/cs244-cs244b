@@ -510,6 +510,7 @@ func (rs *RaftServer) evaluateElection() {
 		fmt.Println("Election won")
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 		log.Println("term", rs.currentTerm, "leader is", rs.id)
 	}
 }
