@@ -4,8 +4,34 @@ import time
 import util
 import os
 import datetime
-from tqdm import tqdm
 from argparse import ArgumentParser
+import sys
+
+
+# https://stackoverflow.com/questions/3160699/python-progress-bar
+# no external dependencies
+def progressbar(it, prefix="", size=60, out=sys.stdout):  # Python3.6+
+    count = len(it)
+    start = time.time()  # time estimate start
+
+    def show(j):
+        x = int(size * j / count)
+        # time estimate calculation and string
+        remaining = ((time.time() - start) / j) * (count - j)
+        mins, sec = divmod(remaining, 60)  # limited to minutes
+        time_str = f"{int(mins):02}:{sec:03.1f}"
+        print(
+            f"{prefix}[{u'█'*x}{('.'*(size-x))}] {j}/{count} Est wait {time_str}",
+            end="\r",
+            file=out,
+            flush=True,
+        )
+
+    show(0.1)  # avoid div/0
+    for i, item in enumerate(it):
+        yield item
+        show(i + 1)
+    print("\n", flush=True, file=out)
 
 
 def _safe_open(path, mode):
@@ -76,6 +102,7 @@ def main(
             f = safe_open_a(output_file)
 
         def look_for_leader(ignore_idx=None):
+            """Look for leader in the processes list. Returns leader index, term, and time"""
             leader_idx = None
             found_leader = False
             while True:
@@ -96,7 +123,6 @@ def main(
                             # leader_time = time.strptime(
                             #     f"{content[0]} {content[1]}", "%Y/%m/%d %H:%M:%S.%f"
                             # )
-                            leader_time = time.time()
                             leader_term = int(content[3])
                             logging.info("server %d is leader", idx)
                             found_leader = True
@@ -110,26 +136,27 @@ def main(
         leader_idx, leader_term, leader_time = look_for_leader()
 
         processes[leader_idx].kill()
-        start_time = time.time()
         processes[leader_idx].wait()
-        # print(start_time)
+        start_time = time.time()
         logging.info("killed leader %d ?", leader_idx)
-        leader_idx, new_term, leader_time = look_for_leader(leader_idx)
-        # duration = time.mktime(leader_time) - start_time
-        duration = (leader_time - start_time) * 0.001  # in milliseconds
+        new_leader_idx, new_term, leader_time = look_for_leader(leader_idx)
+        # duration = (time.mktime(leader_time) - start_time) * 1e6  # in milliseconds
+        duration = (leader_time - start_time) * 1e6  # in milliseconds
         logging.info("duration: %f", duration)
         terms_elapsed = new_term - leader_term
         logging.info("terms elapsed: %d", terms_elapsed)
         f.write(f"{terms_elapsed} {duration}\n")
         f.close()
         # clean up other processes
-        for process in processes:
-            process.kill()
-        for process in processes:
-            process.wait()
+        for i in range(len(processes)):
+            processes[i].kill()
+            processes[i].wait()
+        if terms_elapsed < 1:
+            logging.error("nonsensical data, retrying")
+            run_trial()
 
-    run_trial(first_run=True)
-    for _ in range(trials - 1):
+    # run_trial(first_run=True)
+    for _ in progressbar(range(trials)):
         run_trial()
 
 
