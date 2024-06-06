@@ -29,8 +29,10 @@ func main() {
 
 	rc := raftclient.NewRaftClient(peerAddresses, my_addr, my_port)
 
+	var dnsCommandType int32 = 2
+
 	dnsCommand := pb.DNSCommand{
-		CommandType: 2, //Add record
+		CommandType: dnsCommandType, //Add record
 		Domain:      "yeah.com",
 		Hostname:    "yeah.com",
 		Ip:          "127.0.0.1",
@@ -39,4 +41,10 @@ func main() {
 
 	response := rc.SendDNSCommand(dnsCommand)
 	fmt.Println(response.Success)
+
+	if response.Success && dnsCommandType == 2 {
+		dnsRecord := response.DnsRecord
+		fmt.Println(dnsRecord.Hostname, dnsRecord.Ip, dnsRecord.Ttl, dnsRecord.Added)
+	}
+
 }
