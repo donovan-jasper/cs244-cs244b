@@ -25,8 +25,8 @@ func main() {
 	flag.IntVar(&electionTimeoutMin, "electionTimeoutMin", 150, "Minimum timeout for the server (ms)")
 	flag.IntVar(&electionTimeoutMax, "electionTimeoutMax", 300, "Minimum timeout for the server (ms)")
 	flag.IntVar(&heartbeatTimeoutMin, "hearteatTimeoutMin", 150, "Min heartbeat timeout for the server (ms)")
-	flag.IntVar(&heartbeatTimeoutMax, "heartbeatTimeoutMin", 300, "Max heartbeat timeout for the server (ms)")
-	flag.IntVar(&interval, "interval", 70, "Heartbeat interval for the server (ms)")
+	flag.IntVar(&heartbeatTimeoutMax, "heartbeatTimeoutMax", 300, "Max heartbeat timeout for the server (ms)")
+	flag.IntVar(&interval, "interval", 75, "Heartbeat interval for the server (ms)")
 	flag.Usage = func() {
 		w := flag.CommandLine.Output() // may be os.Stderr - but not necessarily
 		fmt.Fprintf(w, "Usage of %s: <server_id> <server0_address:port> <server1_address:port> ... <serverN_address:port> \n", os.Args[0])
