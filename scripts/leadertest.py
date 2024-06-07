@@ -61,6 +61,7 @@ def main(
     trials: int = 1,
     backup: str = "./backups",
     seperate_backup: str = None,
+    private: str = None,
 ):
     if output_file is None:
         output_file = f"output/150-{timeout}ms.txt"
@@ -86,18 +87,31 @@ def main(
             len(servers),
         )
         return
+    servers = servers[:num_servers]
+    server_ports = [server.split(":") for server in servers]
 
     server_list = " ".join(servers[:num_servers])
     logging.info("server_list: %s", server_list)
+
+    util.setup_remote(servers, seperate_backup=seperate_backup, private=private)
     # run the leader test
 
     def run_trial(first_run=False):
         processes = []
         for idx, server_port in enumerate(servers):
-            server = server_port.split(":")[0]
+            server, port = server_port.split(":")
+
             logging.info("running leader test on %s", server)
             processes.append(
-                util.run_server(server, idx, server_list, restore, interval, timeout)
+                util.run_server(
+                    server,
+                    idx,
+                    server_list,
+                    restore,
+                    interval,
+                    timeout,
+                    private=private,
+                )
             )
 
         def look_for_leader(ignore_idx=None):
@@ -136,6 +150,10 @@ def main(
 
         processes[leader_idx].kill()
         processes[leader_idx].wait()
+        # kill using port
+        util.kill_server(
+            server_ports[leader_idx][0], server_ports[leader_idx][1], private=private
+        )
         start_time = time.time()
         logging.info("killed leader %d ?", leader_idx)
         new_leader_idx, new_term, leader_time = look_for_leader(leader_idx)
@@ -148,6 +166,8 @@ def main(
         for i in range(len(processes)):
             processes[i].kill()
             processes[i].wait()
+            util.kill_server(server_ports[i][0], server_ports[i][1], private=private)
+            # print(processes[i])
         if terms_elapsed < 1 or duration < 0 or new_leader_idx == leader_idx:
             logging.error("nonsensical data, retrying")
             run_trial()
@@ -200,6 +220,7 @@ def parse_args():
         help="sepearte directory for loading backups",
         default=None,
     )
+    argparse.add_argument("-i", "--private", help="Private key file", default=None)
     return argparse.parse_args()
 
 
