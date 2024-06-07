@@ -53,7 +53,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 	currentCommandID := rc.commandID
 	clientRequest := &pb.ClientRequest{
 		CommandID:    rc.commandID,
-		Command:      string(serializedCommand),
+		Command:      serializedCommand,
 		ReplyAddress: rc.myIP,
 		ReplyPort:    int32(rc.myPort),
 	}
@@ -63,25 +63,31 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 	}
 	serializedRequest, err := proto.Marshal(raftMsg)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("error trying to marshal request", "error", err)
 	}
+	slog.Info("First send to raft cluster for ", "id", currentCommandID)
 	rc.sendToRaftLeader(string(serializedRequest))
 	for {
 		reply, ok := rc.responses[currentCommandID]
 		// If the key exists
 		if ok {
+			fmt.Println("Received command response")
 			return *reply
 		}
+		slog.Info("Waiting for response from raft cluster with command ID", "id", currentCommandID)
 		msg, ok := <-rc.net.MsgQueue
+		slog.Info("Received response from raft cluster")
 		if ok {
 			var clientReply pb.ClientReply
 			if err := proto.Unmarshal([]byte(msg), &clientReply); err != nil {
 				slog.Error("failed to unmarshal message: %w", "error", err)
 			}
+			slog.Info("Response Command ID:", "id", clientReply.CommandID)
 			rc.currentLeaderID = int(clientReply.LeaderId)
 			if !clientReply.AmLeader {
-
+				fmt.Println("Received response from non leader")
 				if clientReply.CommandID == currentCommandID {
+					fmt.Println("Resending to leader")
 					rc.sendToRaftLeader(string(serializedRequest))
 					time.Sleep(1 * time.Second)
 				}
@@ -91,6 +97,7 @@ func (rc *RaftClient) SendDNSCommand(dnsCommand pb.DNSCommand) pb.DNSResponse {
 			if err := proto.Unmarshal([]byte(clientReply.Output), &dnsResponse); err != nil {
 				slog.Error("failed to unmarshal message: %w", "error", err)
 			}
+			slog.Info("DNS Response: ", "success", dnsResponse.Success)
 			rc.responses[clientReply.CommandID] = &dnsResponse
 		} else {
 			slog.Info("Channel closed!")

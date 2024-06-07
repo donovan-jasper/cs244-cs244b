@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -13,6 +14,11 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+	}))
+	slog.SetDefault(logger)
+
 	var shouldRestore bool
 	var backupDir string
 	var electionTimeoutMin int

@@ -69,6 +69,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 // Parse DNS queries and respond (if locally known) or forward (if not)
 func parseQuery(m *dns.Msg) {
+	slog.Info("Parsing DNS query", "question", m.Question)
 	for _, q := range m.Question { // for each question (apparently some clients send multiple queries in one request - documentation lol)
 		if q.Qtype != dns.TypeA { // if query type is not A (IPv4 address)
 			continue
@@ -101,12 +102,19 @@ func parseQuery(m *dns.Msg) {
 			}
 
 			// add the response back to the Raft cluster
-			for _, answer := range in.Answer {
-				if a, ok := answer.(*dns.A); ok {
-					err = addRecordToRaftCluster(*a)
-					if err != nil {
-						slog.Error("error adding record to Raft cluster: %v\n", "error", err)
-					}
+			// for _, answer := range in.Answer {
+			// 	if a, ok := answer.(*dns.A); ok {
+			// 		err = addRecordToRaftCluster(*a)
+			// 		if err != nil {
+			// 			slog.Error("error adding record to Raft cluster: %v\n", "error", err)
+			// 		}
+			// 	}
+			// }
+
+			if a, ok := in.Answer[0].(*dns.A); ok {
+				err = addRecordToRaftCluster(*a)
+				if err != nil {
+					slog.Error("error adding record to Raft cluster", "error", err)
 				}
 			}
 
@@ -116,10 +124,14 @@ func parseQuery(m *dns.Msg) {
 }
 
 func readRecordFromRaftCluster(hostname string) (dns.A, bool) {
+	slog.Info("Reading record from Raft cluster", "hostname", hostname)
+
 	raftResponse := raftClient.SendDNSCommand(pb.DNSCommand{
 		CommandType: ReadRecord,
-		Domain:      "saligrama.io",
+		Domain:      hostname,
 	})
+
+	slog.Info("Read record from Raft cluster", "response", raftResponse)
 
 	if raftResponse.Success {
 		return dns.A{
@@ -137,6 +149,8 @@ func readRecordFromRaftCluster(hostname string) (dns.A, bool) {
 }
 
 func addRecordToRaftCluster(record dns.A) error {
+	slog.Info("Adding record to Raft cluster", "record", record)
+
 	raftResponse := raftClient.SendDNSCommand(pb.DNSCommand{
 		CommandType: AddRecord,
 		Domain:      record.Hdr.Name,

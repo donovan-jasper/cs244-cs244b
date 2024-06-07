@@ -52,7 +52,7 @@ message RequestVoteResponse {
 
 message ClientRequest {
   int32 commandID = 1;
-  string command = 2;
+  bytes command = 2;
   string replyAddress = 3;
   int32 replyPort = 4;
 }

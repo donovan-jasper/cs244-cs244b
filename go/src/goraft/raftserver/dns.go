@@ -2,6 +2,7 @@ package raftserver
 
 import (
 	"fmt"
+	"log/slog"
 	sync "sync"
 	"time"
 
@@ -48,8 +49,11 @@ func (dm *DNSModule) Apply(command string) []byte {
 		}
 	}
 
+	slog.Info("Before apply, DNS record contents", "records", dm.dnsRecords)
+
 	switch dnsCommand.CommandType {
 	case AddRecord:
+		fmt.Println("Adding record with domain", dnsCommand.Domain)
 		dm.dnsRecords[dnsCommand.Domain] = pb.DNSRecord{
 			Hostname: dnsCommand.Hostname,
 			Ip:       dnsCommand.Ip,
@@ -58,16 +62,18 @@ func (dm *DNSModule) Apply(command string) []byte {
 		}
 		dnsResponse.Success = true
 	case DeleteRecord:
+		fmt.Println("Deleting record with domain", dnsCommand.Domain)
 		delete(dm.dnsRecords, dnsCommand.Domain)
 		dnsResponse.Success = true
 	case ReadRecord:
-		fmt.Println("Reading")
+		fmt.Println("Reading record with domain", dnsCommand.Domain)
 		record, ok := dm.dnsRecords[dnsCommand.Domain]
 		// If the key exists
 		if ok {
 			dnsResponse.DnsRecord = &record
 			dnsResponse.Success = true
 		} else {
+			fmt.Println("Record not found, read failed")
 			dnsResponse.Success = false
 		}
 
