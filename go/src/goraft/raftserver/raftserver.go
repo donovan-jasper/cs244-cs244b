@@ -27,9 +27,11 @@ const (
 	Leader
 )
 
-const HEARTBEAT_INTERVAL = 2000 * 1000000
-const HEARTBEAT_TIMEOUT_MIN = 5000 * 1000000
-const HEARTBEAT_TIMEOUT_MAX = 10000 * 1000000
+const TODO_HEARTBEAT_MIN = 5000 * 1000000
+const TODO_HEARTBEAT_MAX = 10000 * 1000000
+const HEARTBEAT_INTERVAL = 5000 * 1000000
+const HEARTBEAT_TIMEOUT_MIN = 10000 * 1000000
+const HEARTBEAT_TIMEOUT_MAX = 12000 * 1000000
 const ELECTION_TIMEOUT_MIN = 5000 * 1000000
 const ELECTION_TIMEOUT_MAX = 10000 * 1000000
 
@@ -137,7 +139,6 @@ func (rs *RaftServer) Run() {
 			select {
 			case msg, ok := <-rs.net.MsgQueue:
 				if ok {
-					fmt.Println("Received a message")
 					rs.handleMessage(msg)
 				} else {
 					fmt.Println("Channel closed!")
@@ -219,7 +220,9 @@ func (rs *RaftServer) handleMessage(msg string) {
 }
 
 func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest) {
-	fmt.Println("Handling append entries request")
+	//fmt.Println("Handling append entries request")
+	fmt.Println("Received: ")
+	printAppendEntriesRPC(aeMsg)
 	if int(aeMsg.GetTerm()) > rs.currentTerm {
 		rs.currentTerm = int(aeMsg.GetTerm())
 		rs.votedFor = -1
@@ -276,11 +279,12 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 func (rs *RaftServer) handleAppendEntriesResponse(aerMsg *pb.AppendEntriesResponse) {
 	fmt.Println("Handling append entries response with term", aerMsg.GetTerm())
 	if int(aerMsg.GetTerm()) == rs.currentTerm && rs.loadCurrentState() == Leader {
+		fmt.Println("Success:", aerMsg.GetSuccess(), ", Acknowledger's AckedIdx:", aerMsg.GetAckedIdx(), "My Recorded AckedIdx:", rs.ackedIndex[int(aerMsg.GetFollowerId())], "Recorded NextIdx:", rs.nextIndex[int(aerMsg.GetFollowerId())])
 		if bool(aerMsg.GetSuccess()) && int(aerMsg.GetAckedIdx()) > rs.ackedIndex[int(aerMsg.GetFollowerId())] {
 			rs.nextIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx()) + 1
 			rs.ackedIndex[int(aerMsg.GetFollowerId())] = int(aerMsg.GetAckedIdx())
 			rs.commitLogs()
-		} else if rs.nextIndex[int(aerMsg.GetFollowerId())] > 0 {
+		} else if !bool(aerMsg.GetSuccess()) && rs.nextIndex[int(aerMsg.GetFollowerId())] > 0 {
 			rs.nextIndex[int(aerMsg.GetFollowerId())]--
 			rs.replicateLogs(rs.id, int(aerMsg.GetFollowerId()))
 		}
@@ -558,6 +562,22 @@ func (rs *RaftServer) loadLastState() State {
 
 func (rs *RaftServer) setLastState(s State) {
 	atomic.StoreInt32(&rs.lastState, int32(s))
+}
+
+func printAppendEntriesRPC(ae *pb.AppendEntriesRequest) {
+	fmt.Println("Term:", ae.Term, ", PrevLogIndex:", ae.PrevLogIndex, ", ae.PrevLogTerm:", ae.PrevLogTerm, ", Entries: \n", getEntriesListString(ae.Entries))
+}
+
+func getEntriesListString(entries []*pb.LogEntry) string {
+	entriesStr := ""
+	for _, entry := range entries {
+		entriesStr += getLogEntryString(entry) + ",\n"
+	}
+	return entriesStr
+}
+
+func getLogEntryString(le *pb.LogEntry) string {
+	return "Term: " + strconv.Itoa(int(le.Term)) + ", Index: " + strconv.Itoa(int(le.Index)) + ", Command: " + le.String()
 }
 
 func randomDuration(min, max int) time.Duration {
