@@ -169,6 +169,7 @@ func (w *WAL) WriteEntry(entry *pb.LogEntry) error {
 	if err := binary.Write(w.bufWriter, binary.LittleEndian, int32(len(data))); err != nil {
 		return err
 	}
+	// write data
 	return w.WriteData(data)
 }
 

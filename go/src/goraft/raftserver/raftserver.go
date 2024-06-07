@@ -27,11 +27,23 @@ const (
 	Leader
 )
 
+type RaftServerConfig struct {
+	ID                       int
+	PeerAddresses            []raftnetwork.Address
+	BackupFilepath           string
+	RestoreFromDisk          bool
+	HeartbeatTimeoutInterval int
+	HeartbeatTimeoutMin      int
+	HeartbeatTimeoutMax      int
+	ElectionTimeoutMin       int
+	ElectionTimeoutMax       int
+}
+
 const TODO_HEARTBEAT_MIN = 5000 * 1000000
 const TODO_HEARTBEAT_MAX = 10000 * 1000000
-const HEARTBEAT_INTERVAL = 5000 * 1000000
-const HEARTBEAT_TIMEOUT_MIN = 10000 * 1000000
-const HEARTBEAT_TIMEOUT_MAX = 12000 * 1000000
+const HEARTBEAT_INTERVAL = 2000 * 1000000
+const HEARTBEAT_TIMEOUT_MIN = 5000 * 1000000
+const HEARTBEAT_TIMEOUT_MAX = 10000 * 1000000
 const ELECTION_TIMEOUT_MIN = 5000 * 1000000
 const ELECTION_TIMEOUT_MAX = 10000 * 1000000
 
@@ -62,6 +74,7 @@ type RaftServer struct {
 
 	heartbeatTimeoutTimer *Timer
 	electionTimeoutTimer  *Timer
+	heartbeatInterval     time.Duration
 
 	// TODO: Apply logs in background
 	logApplicationQueue chan pb.LogEntry
@@ -74,6 +87,13 @@ func setStateToCandidateCB(rs *RaftServer) {
 
 func setStateToFollowerCB(rs *RaftServer) {
 	rs.setCurrentState(Follower)
+}
+func NewRaftServerFromConfig(config RaftServerConfig) *RaftServer {
+	rs := NewRaftServer(config.ID, config.PeerAddresses, config.BackupFilepath, config.RestoreFromDisk)
+	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(config.HeartbeatTimeoutMin, config.HeartbeatTimeoutMax), rs, setStateToCandidateCB)
+	rs.electionTimeoutTimer = NewTimer(randomDuration(config.ElectionTimeoutMin, config.ElectionTimeoutMax), rs, setStateToFollowerCB)
+	rs.heartbeatInterval = time.Duration(config.HeartbeatTimeoutInterval)
+	return rs
 }
 
 func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, restoreFromDisk bool) *RaftServer {
@@ -377,7 +397,7 @@ func (rs *RaftServer) sendHeartbeats() {
 			}
 		}
 
-		time.Sleep(HEARTBEAT_INTERVAL)
+		time.Sleep(rs.heartbeatInterval)
 	}
 }
 
@@ -490,6 +510,8 @@ func (rs *RaftServer) evaluateElection() {
 		fmt.Println("Election won")
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+		log.Println("term", rs.currentTerm, "leader is", rs.id)
 	}
 }
 

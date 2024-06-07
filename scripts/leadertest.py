@@ -2,15 +2,74 @@
 import logging
 import time
 import util
+import os
+import datetime
 from argparse import ArgumentParser
+import sys
 
 
-def main(filename: str, timeout: int, num_servers: int, verbose: bool):
+# https://stackoverflow.com/questions/3160699/python-progress-bar
+# no external dependencies
+def progressbar(it, prefix="", size=60, out=sys.stdout):  # Python3.6+
+    count = len(it)
+    start = time.time()  # time estimate start
+
+    def show(j):
+        x = int(size * j / count)
+        # time estimate calculation and string
+        remaining = ((time.time() - start) / j) * (count - j)
+        mins, sec = divmod(remaining, 60)  # limited to minutes
+        time_str = f"{int(mins):02}:{sec:03.1f}"
+        print(
+            f"{prefix}[{u'█'*x}{('.'*(size-x))}] {j}/{count} Est wait {time_str}",
+            end="\r",
+            file=out,
+            flush=True,
+        )
+
+    show(0.1)  # avoid div/0
+    for i, item in enumerate(it):
+        yield item
+        show(i + 1)
+    print("\n", flush=True, file=out)
+
+
+def _safe_open(path, mode):
+    """Open "path" for writing, creating any parent directories as needed."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return open(path, mode)
+
+
+def safe_open_a(path):
+    """Open "path" for appending, creating any parent directories as needed."""
+    return _safe_open(path, "a")
+
+
+def safe_open_w(path):
+    """Open "path" for writing, creating any parent directories as needed."""
+    return _safe_open(path, "w")
+
+
+def main(
+    filename: str,
+    timeout: int,
+    num_servers: int,
+    verbose: bool,
+    interval: int,
+    restore: bool = False,
+    output_file: str = None,
+    trials: int = 1,
+):
+    if output_file is None:
+        output_file = f"output/150-{timeout}ms.txt"
     print(
-        f"filename={filename}, timeout={timeout}, num_servers={num_servers}, verbose={verbose}"
+        f"filename={filename}, timeout={timeout}, num_servers={num_servers}, verbose={verbose} restore={restore}, interval={interval}, output_file={output_file}"
     )
-    util.sh("rm -f debug/*")
-    util.sh("mkdir -p debug")
+    if not restore:
+        util.sh("rm -f debug/*", shell=True)
+        util.sh("mkdir -p debug", shell=True)
+    util.sh("go build ../go/src/goraft/goraft.go", shell=True)
+
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     # read file, assume it is in format of "server:port"
@@ -28,37 +87,80 @@ def main(filename: str, timeout: int, num_servers: int, verbose: bool):
     server_list = " ".join(servers[:num_servers])
     logging.info("server_list: %s", server_list)
     # run the leader test
-    processes = []
-    for idx, server_port in enumerate(servers):
-        server = server_port.split(":")[0]
-        logging.info("running leader test on %s", server)
-        processes.append(util.run_server(server, idx, server_list))
-        # time.sleep(0.1)
 
-    found_leader = False
-    leader_idx = None
-    while True:
-        for idx, process in enumerate(processes):
-            # print(process)
-            if process.poll() is not None:
-                logging.error("server %d died", idx)
-                return
-            for line in open("debug/%d.log" % idx):
-                if util.leader_string in line:
-                    logging.info("server %d is leader", idx)
-                    found_leader = True
-                    leader_idx = idx
+    def run_trial(first_run=False):
+        processes = []
+        for idx, server_port in enumerate(servers):
+            server = server_port.split(":")[0]
+            logging.info("running leader test on %s", server)
+            processes.append(
+                util.run_server(server, idx, server_list, restore, interval, timeout)
+            )
+        if first_run:
+            f = safe_open_w(output_file)
+        else:
+            f = safe_open_a(output_file)
+
+        def look_for_leader(ignore_idx=None):
+            """Look for leader in the processes list. Returns leader index, term, and time"""
+            leader_idx = None
+            found_leader = False
+            while True:
+                for idx, process in enumerate(processes):
+                    if idx == ignore_idx:  # for second time around
+                        continue
+                    # print(process)
+                    if process.poll() is not None:
+                        logging.error("server %d died", idx)
+                        # kill process
+                        exit(1)
+                    for line in open("debug/%d-err.log" % idx):
+                        if util.leader_string in line:
+                            leader_time = time.time()
+                            # line looks like 2024/06/05 23:43:43 term 1 leader is 4
+                            content = line.split(" ")
+                            # print(content[1])
+                            # leader_time = time.strptime(
+                            #     f"{content[0]} {content[1]}", "%Y/%m/%d %H:%M:%S.%f"
+                            # )
+                            leader_term = int(content[3])
+                            logging.info("server %d is leader", idx)
+                            found_leader = True
+                            leader_idx = idx
+                            break
+                if found_leader:
                     break
-        if found_leader:
-            break
-    # TODO: once you figure out which one is leader, kill it
-    processes[leader_idx].kill()
-    logging.info("killed leader %d ?", leader_idx)
-    for process in processes:
-        process.kill()
+            # print(leader_idx, leader_term, leader_time)
+            return leader_idx, leader_term, leader_time
+
+        leader_idx, leader_term, leader_time = look_for_leader()
+
+        processes[leader_idx].kill()
+        processes[leader_idx].wait()
+        start_time = time.time()
+        logging.info("killed leader %d ?", leader_idx)
+        new_leader_idx, new_term, leader_time = look_for_leader(leader_idx)
+        # duration = (time.mktime(leader_time) - start_time) * 1e6  # in milliseconds
+        duration = (leader_time - start_time) * 1e6  # in milliseconds
+        logging.info("duration: %f", duration)
+        terms_elapsed = new_term - leader_term
+        logging.info("terms elapsed: %d", terms_elapsed)
+        f.write(f"{terms_elapsed} {duration}\n")
+        f.close()
+        # clean up other processes
+        for i in range(len(processes)):
+            processes[i].kill()
+            processes[i].wait()
+        if terms_elapsed < 1:
+            logging.error("nonsensical data, retrying")
+            run_trial()
+
+    # run_trial(first_run=True)
+    for _ in progressbar(range(trials)):
+        run_trial()
 
 
-if __name__ == "__main__":
+def parse_args():
     argparse = ArgumentParser()
     argparse.add_argument(
         "filename", help="The name of the file to read for cluster servers"
@@ -68,12 +170,29 @@ if __name__ == "__main__":
     )
     argparse.add_argument(
         "--timeout",
-        help="timeout hige range (ms). NOT IMPLEMENTED",
+        help="timeout max (ms)",
         type=int,
-        default=150,
+        default=300,
+    )
+    argparse.add_argument(
+        "--restore", help="Restore from previous state", action="store_true"
+    )
+    argparse.add_argument(
+        "--interval",
+        help="Interval between heartbeats (ms)",
+        type=int,
+        default=75,
     )
     argparse.add_argument(
         "--verbose", help="Enable verbose output", action="store_true"
     )
-    args = argparse.parse_args()
+    argparse.add_argument("--output_file", help="Output file to write to", default=None)
+    argparse.add_argument(
+        "--trials", help="Number of trials to run", type=int, default=1
+    )
+    return argparse.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
     main(**vars(args))
