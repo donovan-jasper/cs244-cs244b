@@ -99,7 +99,7 @@ func TestLoadLog(t *testing.T) {
 	rl.AppendEntry(entry)
 
 	// Load the log from the WAL
-	rl.LoadLog()
+	rl.LoadLog(filepath)
 
 	// Check if the log was loaded successfully
 	assert.Equal(t, int32(1), rl.GetSize(), "Failed to load log from WAL")

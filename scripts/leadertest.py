@@ -59,6 +59,8 @@ def main(
     restore: bool = False,
     output_file: str = None,
     trials: int = 1,
+    backup: str = "./backups",
+    seperate_backup: str = None,
 ):
     if output_file is None:
         output_file = f"output/150-{timeout}ms.txt"
@@ -72,6 +74,7 @@ def main(
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
+    logging.info("seperate_backup: %s", seperate_backup)
     # read file, assume it is in format of "server:port"
     with open(filename, "r") as f:
         servers = f.read().splitlines()
@@ -189,6 +192,12 @@ def parse_args():
     argparse.add_argument("--output_file", help="Output file to write to", default=None)
     argparse.add_argument(
         "--trials", help="Number of trials to run", type=int, default=1
+    )
+    argparse.add_argument("--backup", help="directory for logs", default="./backups")
+    argparse.add_argument(
+        "--seperate-backup",
+        help="sepearte directory for loading backups",
+        default=None,
     )
     return argparse.parse_args()
 

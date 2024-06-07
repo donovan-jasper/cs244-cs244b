@@ -56,6 +56,7 @@ type RaftLog struct {
  * - file exists, loadBackup = true. Load from backup
  * - file does not exist, loadBackup = false. Create new file
  * - file does not exist, loadBackup = true. Throw error
+ * param loadFile loads from a seperate backup. ignores loadBackup
  */
 func NewWAL(filename string, loadBackup bool) *WAL {
 	// only for writing
@@ -235,8 +236,14 @@ func (w *WAL) ClearState() error {
 	return nil
 }
 
-func (w *WAL) ReadState() (string, error) {
-	variables, err := os.ReadFile(w.filename)
+func (w *WAL) ReadState(filename string) (string, error) {
+	if filename == "" {
+		filename = w.filename
+	}
+	variables, err := os.ReadFile(filename)
+	if err != nil {
+		log.Printf("Failed to read file: %v", err)
+	}
 	return string(variables), err
 }
 
@@ -288,9 +295,9 @@ func (r *RaftLog) SaveLog() {
 	}
 }
 
-func (r *RaftLog) LoadLog() {
-	// load log from disk
-	file, err := os.Open(r.wal.filename)
+// load log from disk, seperately
+func (r *RaftLog) LoadLog(filename string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -306,10 +313,4 @@ func (r *RaftLog) Close() {
 	r.wal.mu.Lock()
 	defer r.wal.mu.Unlock()
 	r.SaveLog()
-}
-
-func (r *RaftLog) Open() {
-	r.wal.mu.Lock()
-	defer r.wal.mu.Unlock()
-	r.LoadLog()
 }

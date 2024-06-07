@@ -21,7 +21,14 @@ def sh(command: str, bg=False, shell=False, **kwargs):
 
 
 def run_server(
-    host, idx, server_list, restore=False, interval=None, timeout=None
+    host,
+    idx,
+    server_list,
+    restore=False,
+    interval=None,
+    timeout=None,
+    backups=None,
+    seperate_backup=None,
 ) -> subprocess.Popen:
     # assumes goraft has already been built
     command_prefix = "./goraft"
@@ -32,6 +39,10 @@ def run_server(
         command_prefix += (
             f" -electionTimeoutMax={timeout} -heartbeatTimeoutMax={timeout}"
         )
+    if backups is not None:
+        command_prefix += f" -backup={backups}"
+    if seperate_backup is not None:
+        command_prefix += f" -seperate-backup={seperate_backup}"
     if host == LOCALHOST:
         command = f"{command_prefix} --restore={restore} {idx} {server_list}"
     else:

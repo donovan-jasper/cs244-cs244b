@@ -31,6 +31,7 @@ type RaftServerConfig struct {
 	ID                       int
 	PeerAddresses            []raftnetwork.Address
 	BackupFilepath           string
+	seperateBackupDir        string
 	RestoreFromDisk          bool
 	HeartbeatTimeoutInterval int
 	HeartbeatTimeoutMin      int
@@ -89,14 +90,14 @@ func setStateToFollowerCB(rs *RaftServer) {
 	rs.setCurrentState(Follower)
 }
 func NewRaftServerFromConfig(config RaftServerConfig) *RaftServer {
-	rs := NewRaftServer(config.ID, config.PeerAddresses, config.BackupFilepath, config.RestoreFromDisk)
+	rs := NewRaftServer(config.ID, config.PeerAddresses, config.BackupFilepath, config.RestoreFromDisk, config.seperateBackupDir)
 	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(config.HeartbeatTimeoutMin, config.HeartbeatTimeoutMax), rs, setStateToCandidateCB)
 	rs.electionTimeoutTimer = NewTimer(randomDuration(config.ElectionTimeoutMin, config.ElectionTimeoutMax), rs, setStateToFollowerCB)
 	rs.heartbeatInterval = time.Duration(config.HeartbeatTimeoutInterval)
 	return rs
 }
 
-func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, restoreFromDisk bool) *RaftServer {
+func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, restoreFromDisk bool, seperateBackupDir string) *RaftServer {
 	rs := new(RaftServer)
 	rs.id = id
 	rs.peers = peers
@@ -121,11 +122,17 @@ func NewRaftServer(id int, peers []raftnetwork.Address, backupFilepath string, r
 		_ = os.Mkdir(backupFilepath, os.ModePerm)
 		// choosing to ignore err
 	}
+	if restoreFromDisk {
+		rs.loadPersistentVariables("")
+	}
 	rs.persistantVariables = raftlog.NewWAL(filepath.Join(backupFilepath, strconv.Itoa(id)+"-state"), restoreFromDisk)
 	rs.logEntries = raftlog.NewRaftLog(filepath.Join(backupFilepath, strconv.Itoa(id)), restoreFromDisk)
-
-	if restoreFromDisk {
-		rs.loadPersistentVariables()
+	if seperateBackupDir != "" {
+		if _, err := os.Stat(seperateBackupDir); os.IsNotExist(err) {
+			log.Fatalf("Seperate backup does not exist %s", seperateBackupDir)
+		}
+		rs.logEntries.LoadLog(filepath.Join(seperateBackupDir, strconv.Itoa(id)))
+		rs.loadPersistentVariables(filepath.Join(seperateBackupDir, strconv.Itoa(id)+"-state"))
 	}
 
 	rs.net = raftnetwork.NewNetworkModule()
@@ -542,8 +549,8 @@ func (rs *RaftServer) sendRaftMsg(targetId int, raftMsg *pb.RaftMessage) {
 	rs.net.Send(addr.Ip+":"+addr.Port, string(serializedMsg))
 }
 
-func (rs *RaftServer) loadPersistentVariables() {
-	variables, _ := rs.persistantVariables.ReadState()
+func (rs *RaftServer) loadPersistentVariables(filename string) {
+	variables, _ := rs.persistantVariables.ReadState(filename)
 	splitVars := strings.Split(variables, "\n")
 	if len(splitVars) != 2 {
 		fmt.Println("Error: Failed to load variables from file")

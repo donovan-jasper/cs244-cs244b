@@ -20,8 +20,10 @@ func main() {
 	var heartbeatTimeoutMax int
 	var heartbeatTimeoutMin int
 	var interval int
+	var seperateBackupDir string
 	flag.BoolVar(&shouldRestore, "restore", false, "Restore from backup")
 	flag.StringVar(&backupDir, "backup", "./backups", "Backup directory for the server")
+	flag.StringVar(&seperateBackupDir, "seperate-backup", "", "Seperate backup to load from. Ignores -restore flag")
 	flag.IntVar(&electionTimeoutMin, "electionTimeoutMin", 150, "Minimum timeout for the server (ms)")
 	flag.IntVar(&electionTimeoutMax, "electionTimeoutMax", 300, "Minimum timeout for the server (ms)")
 	flag.IntVar(&heartbeatTimeoutMin, "hearteatTimeoutMin", 150, "Min heartbeat timeout for the server (ms)")

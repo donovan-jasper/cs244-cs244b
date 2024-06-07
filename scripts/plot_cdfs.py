@@ -77,7 +77,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 file_names = glob.glob(args.folder + "/*.txt")
-labels = sorted([os.path.basename(file.split(".")[0]) for file in file_names])
+labels = sorted([os.path.basename(file.split(".txt")[0]) for file in file_names])
 print(labels)
 colors = ["orange", "purple", "red", "green", "red", "blue"]
 linestyles = [
