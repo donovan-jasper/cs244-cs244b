@@ -99,10 +99,6 @@ def main(
             processes.append(
                 util.run_server(server, idx, server_list, restore, interval, timeout)
             )
-        if first_run:
-            f = safe_open_w(output_file)
-        else:
-            f = safe_open_a(output_file)
 
         def look_for_leader(ignore_idx=None):
             """Look for leader in the processes list. Returns leader index, term, and time"""
@@ -144,19 +140,24 @@ def main(
         logging.info("killed leader %d ?", leader_idx)
         new_leader_idx, new_term, leader_time = look_for_leader(leader_idx)
         # duration = (time.mktime(leader_time) - start_time) * 1e6  # in milliseconds
-        duration = (leader_time - start_time) * 1e6  # in milliseconds
+        duration = (leader_time - start_time) * 1e3  # in milliseconds
         logging.info("duration: %f", duration)
         terms_elapsed = new_term - leader_term
         logging.info("terms elapsed: %d", terms_elapsed)
-        f.write(f"{terms_elapsed} {duration}\n")
-        f.close()
         # clean up other processes
         for i in range(len(processes)):
             processes[i].kill()
             processes[i].wait()
-        if terms_elapsed < 1:
+        if terms_elapsed < 1 or duration < 0 or new_leader_idx == leader_idx:
             logging.error("nonsensical data, retrying")
             run_trial()
+        else:
+            if first_run:
+                f = safe_open_w(output_file)
+            else:
+                f = safe_open_a(output_file)
+            f.write(f"{terms_elapsed} {duration}\n")
+            f.close()
 
     # run_trial(first_run=True)
     for _ in progressbar(range(trials)):

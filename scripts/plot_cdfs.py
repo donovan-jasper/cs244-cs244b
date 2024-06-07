@@ -5,6 +5,7 @@ import argparse
 import pandas as pd
 import glob
 import os
+import time
 
 
 def generate_cdf(data):
