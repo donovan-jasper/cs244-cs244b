@@ -90,8 +90,8 @@ func setStateToFollowerCB(rs *RaftServer) {
 }
 func NewRaftServerFromConfig(config RaftServerConfig) *RaftServer {
 	rs := NewRaftServer(config.ID, config.PeerAddresses, config.BackupFilepath, config.RestoreFromDisk, config.seperateBackupDir)
-	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(HEARTBEAT_TIMEOUT_MIN, HEARTBEAT_TIMEOUT_MAX), rs, setStateToCandidateCB)
-	rs.electionTimeoutTimer = NewTimer(randomDuration(ELECTION_TIMEOUT_MIN, ELECTION_TIMEOUT_MAX), rs, setStateToFollowerCB)
+	rs.heartbeatTimeoutTimer = NewTimer(randomDuration(config.HeartbeatTimeoutMin, config.HeartbeatTimeoutMax), rs, setStateToCandidateCB)
+	rs.electionTimeoutTimer = NewTimer(randomDuration(config.ElectionTimeoutMin, config.ElectionTimeoutMax), rs, setStateToFollowerCB)
 	rs.heartbeatInterval = time.Duration(HEARTBEAT_INTERVAL)
 	return rs
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import logging
 import time
 import util
@@ -62,6 +63,7 @@ def main(
     backup: str = "./backups",
     seperate_backup: str = None,
     private: str = None,
+    remote: str = None,
 ):
     if output_file is None:
         output_file = f"output/150-{timeout}ms.txt"
@@ -91,6 +93,29 @@ def main(
     server_ports = [server.split(":") for server in servers]
 
     server_list = " ".join(servers[:num_servers])
+    if remote is not None:
+        with open(remote, "r") as fremote:
+            remote_data = json.load(fremote)
+            if "servers" not in remote_data:
+                logging.error("no server key in remote file")
+            if len(remote_data["servers"]) < num_servers:
+                logging.error(
+                    "not enough servers in remote file, need at least %d, only had %d",
+                    num_servers,
+                    len(remote_data["servers"]),
+                )
+            server_list = " ".join(
+                [
+                    d["private"] + ":" + str(d["port"])
+                    for d in remote_data["servers"][:num_servers]
+                ]
+            )
+            print(server_list)
+            servers = [
+                d["public"] + ":" + str(d["port"])
+                for d in remote_data["servers"][:num_servers]
+            ]
+            print(servers)
     logging.info("server_list: %s", server_list)
 
     util.setup_remote(servers, seperate_backup=seperate_backup, private=private)
@@ -182,6 +207,7 @@ def main(
     # run_trial(first_run=True)
     for _ in progressbar(range(trials)):
         run_trial()
+        time.sleep(0.1)
 
 
 def parse_args():
@@ -221,6 +247,9 @@ def parse_args():
         default=None,
     )
     argparse.add_argument("-i", "--private", help="Private key file", default=None)
+    argparse.add_argument(
+        "--remote", help="extra file for remote server list", default=None
+    )
     return argparse.parse_args()
 
 
