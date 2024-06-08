@@ -115,6 +115,7 @@ def main(
         return dns_process, processes
 
     def run_trial(dns_server, filename, output_folder):
+        dig_log = open("debug/dig.log", "w")
         time.sleep(5)  # wait for servers to start
         # util.wait_for_port(15353, dns_server, timeout=10)
         domains_list = open(filename, "r").read().splitlines()
@@ -130,12 +131,12 @@ def main(
                 util.sh(
                     f"dig +tries=1 {domain} @{dns_server} -p 15353",
                     shell=True,
-                    ignore=True,
-                    stdout=open("debug/dig.log", "w"),
+                    ignore=False,
+                    stdout=dig_log,
                 )
                 end = time.time()
                 files[i].write(f"{end - start}\n")
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
     if output_folder is None:
         output_folder = "dns_output/"
