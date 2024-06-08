@@ -41,7 +41,7 @@ def progressbar(it, prefix="", size=60, out=sys.stdout):  # Python3.6+
 def _safe_open(path, mode):
     """Open "path" for writing, creating any parent directories as needed."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    return open(path, mode)
+    return open(path, mode, buffering=1)
 
 
 def safe_open_a(path):
@@ -131,7 +131,7 @@ def main(
                 util.sh(
                     f"dig +tries=1 {domain} @{dns_server} -p 15353",
                     shell=True,
-                    ignore=False,
+                    ignore=True,
                     stdout=dig_log,
                 )
                 end = time.time()

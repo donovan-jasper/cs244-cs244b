@@ -376,7 +376,7 @@ func (rs *RaftServer) handleRequestVoteResponse(rvMsg *pb.RequestVoteResponse) {
 
 func (rs *RaftServer) sendHeartbeats() {
 	for rs.loadCurrentState() == Leader {
-		slog.Info("total entries:", rs.logEntries.GetSize())
+		slog.Info("Entry size", "total entries:", rs.logEntries.GetSize())
 		for i := range len(rs.peers) {
 			if i != rs.id {
 				//slog.Info("Sending heartbeat to", "serverId", i)
@@ -521,7 +521,7 @@ func (rs *RaftServer) evaluateElection() {
 		rs.currentLeader = rs.id
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 		// log.Println("term", rs.currentTerm, "leader is", rs.id)
-		slog.Info("term", rs.currentTerm, "leader is", rs.id)
+		slog.Info("election term", "term", rs.currentTerm, "leader is", rs.id)
 	}
 }
 
