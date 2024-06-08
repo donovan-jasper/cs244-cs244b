@@ -176,7 +176,7 @@ func main() {
 	server := &dns.Server{Addr: ":15353", Net: "udp"}
 	slog.Info("Starting DNS server on port%s\n", "addr", server.Addr)
 
-	raftClient = *raftclient.NewRaftClient(os.Args[1:], "127.0.0.1", 16353)
+	raftClient = *raftclient.NewRaftClient(os.Args[2:], os.Args[1], 16353)
 
 	// Start server
 	err := server.ListenAndServe()
