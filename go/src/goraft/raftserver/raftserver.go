@@ -277,7 +277,7 @@ func (rs *RaftServer) handleAppendEntriesRequest(aeMsg *pb.AppendEntriesRequest)
 				slog.Info("Appending new entry from AE RPC")
 				rs.logEntries.AppendEntry(aeMsg.Entries[i])
 			}
-			log.Println("total entries:", rs.logEntries.GetSize())
+			// log.Println("total entries:", rs.logEntries.GetSize())
 
 			if aeMsg.LeaderCommit > rs.commitIndex {
 				rs.commitIndex = min(aeMsg.LeaderCommit, rs.logEntries.GetSize()-1)
@@ -376,10 +376,11 @@ func (rs *RaftServer) handleRequestVoteResponse(rvMsg *pb.RequestVoteResponse) {
 
 func (rs *RaftServer) sendHeartbeats() {
 	for rs.loadCurrentState() == Leader {
+		slog.Info("total entries:", rs.logEntries.GetSize())
 		for i := range len(rs.peers) {
 			if i != rs.id {
 				//slog.Info("Sending heartbeat to", "serverId", i)
-				log.Println("total entries:", rs.logEntries.GetSize())
+				// log.Println("total entries:", rs.logEntries.GetSize())
 				var prevLogIndex int32 = -1
 				var prevLogTerm int32 = 0
 				if rs.logEntries.GetSize() != 0 {
@@ -426,7 +427,8 @@ func (rs *RaftServer) handleClientRequest(crMsg *pb.ClientRequest) {
 		newLogEntry.ClientPort = crMsg.ReplyPort
 
 		rs.logEntries.AppendEntry(newLogEntry)
-		log.Println("total entries:", rs.logEntries.GetSize())
+		// log.Println("total entries:", rs.logEntries.GetSize())
+		slog.Info("total entries:", rs.logEntries.GetSize())
 		if len(rs.peers) == 1 {
 			rs.logApplicationQueue <- *newLogEntry
 			slog.Info("We are the only server, so queued entry to apply")
@@ -518,7 +520,8 @@ func (rs *RaftServer) evaluateElection() {
 		rs.setCurrentState(Leader)
 		rs.currentLeader = rs.id
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-		log.Println("term", rs.currentTerm, "leader is", rs.id)
+		// log.Println("term", rs.currentTerm, "leader is", rs.id)
+		slog.Info("term", rs.currentTerm, "leader is", rs.id)
 	}
 }
 
