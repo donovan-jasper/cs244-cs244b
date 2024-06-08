@@ -117,7 +117,7 @@ def main(
 
     def run_trial(dns_server, filename, output_folder, num_domains=None):
         dig_log = open("debug/dig.log", "w")
-        time.sleep(5)  # wait for servers to start
+        time.sleep(20)  # wait for servers to start
         # util.wait_for_port(15353, dns_server, timeout=10)
         domains_list = open(filename, "r").read().splitlines()
         try1 = safe_open_a(output_folder + "/try1.txt")

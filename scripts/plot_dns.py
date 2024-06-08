@@ -46,7 +46,7 @@ def plot_cdfs(file_names, labels, colors, linestyles):
 
     axes = plt.gca()
     axes.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    # plt.xscale("log")
+    plt.xscale("log")
     plt.legend()
     plt.savefig("dns_plot.png")
     # plt.show()
