@@ -68,6 +68,7 @@ def main(
     seperate_backup: str = None,
     private: str = None,
     remote: str = None,
+    num_domains: int = None,
 ):
     def setup(dns_server, servers, server_list):
         util.setup_remote(
@@ -114,15 +115,17 @@ def main(
             )
         return dns_process, processes
 
-    def run_trial(dns_server, filename, output_folder):
+    def run_trial(dns_server, filename, output_folder, num_domains=None):
         dig_log = open("debug/dig.log", "w")
         time.sleep(5)  # wait for servers to start
         # util.wait_for_port(15353, dns_server, timeout=10)
         domains_list = open(filename, "r").read().splitlines()
-        try1 = safe_open_w(output_folder + "/try1.txt")
-        try2 = safe_open_w(output_folder + "/try2.txt")
-        try3 = safe_open_w(output_folder + "/try3.txt")
+        try1 = safe_open_a(output_folder + "/try1.txt")
+        try2 = safe_open_a(output_folder + "/try2.txt")
+        try3 = safe_open_a(output_folder + "/try3.txt")
         files = [try1, try2, try3]
+        if num_domains is not None:
+            domains_list = domains_list[:num_domains]
         for domain in tqdm(domains_list):
             # print(domain)
             # time.sleep(100)
@@ -131,12 +134,12 @@ def main(
                 util.sh(
                     f"dig +tries=1 {domain} @{dns_server} -p 15353",
                     shell=True,
-                    ignore=True,
+                    ignore=False,
                     stdout=dig_log,
                 )
                 end = time.time()
                 files[i].write(f"{end - start}\n")
-                # time.sleep(0.1)
+                time.sleep(0.1)
 
     if output_folder is None:
         output_folder = "dns_output/"
@@ -160,7 +163,12 @@ def main(
     print(server_list)
     dns_process, processes = setup(dns_server_data, servers, server_list)
     domains_file = domains
-    run_trial(dns_server, filename=domains_file, output_folder=output_folder)
+    run_trial(
+        dns_server,
+        filename=domains_file,
+        output_folder=output_folder,
+        num_domains=num_domains,
+    )
     # cleanup
     dns_process.terminate()
     dns_process.wait()
@@ -209,6 +217,7 @@ def parse_args():
         help="sepearte directory for loading backups",
         default=None,
     )
+    argparse.add_argument("--num_domains", help="Number of domains to query", type=int)
     argparse.add_argument(
         "--domains", help="file with domains to query", default="alexa-top-1000.txt"
     )
